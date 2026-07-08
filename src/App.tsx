@@ -1,0 +1,833 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Check, AlertCircle } from 'lucide-react';
+
+import { Product, CartItem, Order, ContactMessage, Category } from './types';
+import { DEFAULT_PRODUCTS } from './data';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import ProductCard from './components/ProductCard';
+import AdminPanel from './components/AdminPanel';
+
+// Modular Page Imports
+import Home from './components/Home';
+import Shop from './components/Shop';
+import Wishlist from './components/Wishlist';
+import HowItWorks from './components/HowItWorks';
+import About from './components/About';
+import FAQ from './components/FAQ';
+import Contact from './components/Contact';
+import Cart from './components/Cart';
+import Checkout from './components/Checkout';
+import OrderConfirmation from './components/OrderConfirmation';
+import { PrivacyPolicy, TermsOfService } from './components/LegalPages';
+
+export default function App() {
+  // --- STATE ---
+  const [appLoading, setAppLoading] = useState<boolean>(true);
+  const [currentPage, setCurrentPage] = useState<string>('home');
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState<Category | 'all'>('all');
+  const [activeConditionFilter, setActiveConditionFilter] = useState<string>('all');
+  const [activeSizeFilter, setActiveSizeFilter] = useState<string>('all');
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
+
+  // Owner Config States
+  const [shopEmail, setShopEmail] = useState('cesaresmero2@gmail.com');
+  const [shopPhone, setShopPhone] = useState('+63 912 345 6789');
+  const [shopFacebook, setShopFacebook] = useState('https://www.facebook.com/profile.php?id=100064749982511');
+  const [shopGcash, setShopGcash] = useState('0912 345 6789');
+
+  // Checkout Form State
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>('delivery');
+  const [address, setAddress] = useState('');
+  const [contactMethod, setContactMethod] = useState<'phone' | 'email' | 'facebook'>('phone');
+  const [note, setNote] = useState('');
+
+  // Contact Form State
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMsgText, setContactMsgText] = useState('');
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+
+  // Latest submitted order for confirmation screen
+  const [lastSubmittedOrder, setLastSubmittedOrder] = useState<Order | null>(null);
+
+  // Toast & custom confirmation modal state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  const showConfirmDialog = (message: string, onConfirm: () => void) => {
+    setConfirmDialog({ message, onConfirm });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  // --- INITIALIZATION ---
+  useEffect(() => {
+    // Products
+    const storedProducts = localStorage.getItem('etz_products');
+    if (storedProducts) {
+      setProducts(JSON.parse(storedProducts));
+    } else {
+      localStorage.setItem('etz_products', JSON.stringify(DEFAULT_PRODUCTS));
+      setProducts(DEFAULT_PRODUCTS);
+    }
+
+    // Cart
+    const storedCart = localStorage.getItem('etz_cart');
+    if (storedCart) {
+      setCart(JSON.parse(storedCart));
+    }
+
+    // Orders
+    const storedOrders = localStorage.getItem('etz_orders');
+    if (storedOrders) {
+      setOrders(JSON.parse(storedOrders));
+    }
+
+    // Inquiries
+    const storedMessages = localStorage.getItem('etz_messages');
+    if (storedMessages) {
+      setContactMessages(JSON.parse(storedMessages));
+    }
+
+    // Wishlist
+    const storedWishlist = localStorage.getItem('etz_wishlist');
+    if (storedWishlist) {
+      setWishlist(JSON.parse(storedWishlist));
+    }
+
+    // Recently Viewed
+    const storedRecently = localStorage.getItem('etz_recently_viewed');
+    if (storedRecently) {
+      setRecentlyViewed(JSON.parse(storedRecently));
+    }
+
+    // Settings
+    const storedSettings = localStorage.getItem('etz_settings');
+    if (storedSettings) {
+      const parsed = JSON.parse(storedSettings);
+      setShopEmail(parsed.email || 'cesaresmero2@gmail.com');
+      setShopPhone(parsed.phone || '+63 912 345 6789');
+      setShopFacebook(parsed.facebook || 'https://www.facebook.com/profile.php?id=100064749982511');
+      setShopGcash(parsed.gcash || '0912 345 6789');
+    }
+
+    // Secret Admin query param route
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('portal') === 'etz' || params.get('admin') === 'true') {
+      setCurrentPage('admin');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAppLoading(false);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // --- PERSISTENCE HELPERS ---
+  const saveProducts = (updated: Product[]) => {
+    setProducts(updated);
+    localStorage.setItem('etz_products', JSON.stringify(updated));
+  };
+
+  const saveCart = (updated: CartItem[]) => {
+    setCart(updated);
+    localStorage.setItem('etz_cart', JSON.stringify(updated));
+  };
+
+  const saveOrders = (updated: Order[]) => {
+    setOrders(updated);
+    localStorage.setItem('etz_orders', JSON.stringify(updated));
+  };
+
+  const saveMessages = (updated: ContactMessage[]) => {
+    setContactMessages(updated);
+    localStorage.setItem('etz_messages', JSON.stringify(updated));
+  };
+
+  const saveWishlist = (updated: string[]) => {
+    setWishlist(updated);
+    localStorage.setItem('etz_wishlist', JSON.stringify(updated));
+  };
+
+  const saveRecentlyViewed = (updated: string[]) => {
+    setRecentlyViewed(updated);
+    localStorage.setItem('etz_recently_viewed', JSON.stringify(updated));
+  };
+
+  const handleToggleWishlist = (productId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    const updated = wishlist.includes(productId)
+      ? wishlist.filter(id => id !== productId)
+      : [...wishlist, productId];
+    saveWishlist(updated);
+  };
+
+  const handleAddToRecentlyViewed = (productId: string) => {
+    const filtered = recentlyViewed.filter(id => id !== productId);
+    const updated = [productId, ...filtered].slice(0, 5);
+    saveRecentlyViewed(updated);
+  };
+
+  // --- NAVIGATION CONTROLLER ---
+  const handleNavigate = (page: string, category?: Category | 'all') => {
+    setCurrentPage(page);
+    setSelectedProductId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (category) {
+      setActiveCategoryFilter(category);
+    } else if (page === 'shop' && !category) {
+      setActiveCategoryFilter('all');
+    }
+  };
+
+  // --- CART OPERATIONS ---
+  const handleAddToCart = (product: Product) => {
+    if (product.isSold) return;
+
+    const existingIndex = cart.findIndex(item => item.product.id === product.id);
+    if (existingIndex > -1) {
+      // Already in cart, don't duplicate (since items are 1-of-1)
+      showToast('This item is already in your cart.', 'info');
+    } else {
+      const updated = [...cart, { product, quantity: 1 }];
+      saveCart(updated);
+      showToast(`Added "${product.name}" to cart.`, 'success');
+    }
+  };
+
+  const handleRemoveFromCart = (productId: string) => {
+    const updated = cart.filter(item => item.product.id !== productId);
+    saveCart(updated);
+  };
+
+  const clearCart = () => {
+    saveCart([]);
+  };
+
+  // --- INVENTORY MANAGEMENT (ADMIN) ---
+  const handleAddProduct = (newProduct: Omit<Product, 'id' | 'isSold' | 'dateAdded'>) => {
+    const fresh: Product = {
+      ...newProduct,
+      id: `etz-custom-${Date.now()}`,
+      isSold: false,
+      dateAdded: new Date().toISOString().split('T')[0]
+    };
+    const updated = [fresh, ...products];
+    saveProducts(updated);
+  };
+
+  const handleUpdateProduct = (updatedProduct: Product) => {
+    const updated = products.map(p => p.id === updatedProduct.id ? updatedProduct : p);
+    saveProducts(updated);
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    const updated = products.filter(p => p.id !== id);
+    saveProducts(updated);
+    // Remove from cart if it was deleted
+    handleRemoveFromCart(id);
+  };
+
+  const handleUpdateSettings = (settings: { email: string; phone: string; facebook: string; gcash: string }) => {
+    setShopEmail(settings.email);
+    setShopPhone(settings.phone);
+    setShopFacebook(settings.facebook);
+    setShopGcash(settings.gcash);
+    localStorage.setItem('etz_settings', JSON.stringify(settings));
+  };
+
+  const handleResetDatabase = () => {
+    showConfirmDialog(
+      'Are you sure you want to restore the default 8 hand-checked clothing items and clear custom items?',
+      () => {
+        saveProducts(DEFAULT_PRODUCTS);
+        showToast('Catalog has been reset to defaults.', 'success');
+      }
+    );
+  };
+
+  // --- CHECKOUT PROCESS ---
+  const handlePlaceOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName || !phone || !email || (deliveryMethod === 'delivery' && !address)) {
+      showToast('Please fill in all mandatory customer details.', 'error');
+      return;
+    }
+
+    const subtotal = cart.reduce((acc, item) => acc + item.product.price, 0);
+
+    const newOrder: Order = {
+      id: `ETZ-${Math.floor(100000 + Math.random() * 900000)}`,
+      customerName: fullName,
+      customerPhone: phone,
+      customerEmail: email,
+      deliveryMethod,
+      deliveryAddress: deliveryMethod === 'delivery' ? address : undefined,
+      contactMethod,
+      note,
+      items: cart.map(item => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        price: item.product.price,
+        size: item.product.size,
+        condition: item.product.condition,
+        image: item.product.images[0]
+      })),
+      subtotal,
+      status: 'pending',
+      dateCreated: new Date().toLocaleString()
+    };
+
+    // Save order
+    const updatedOrders = [newOrder, ...orders];
+    saveOrders(updatedOrders);
+
+    // Auto-mark ordered items as SOLD!
+    const cartProductIds = cart.map(item => item.product.id);
+    const updatedProducts = products.map(p => {
+      if (cartProductIds.includes(p.id)) {
+        return { ...p, isSold: true };
+      }
+      return p;
+    });
+    saveProducts(updatedProducts);
+
+    // Save last submitted order for confirmation screen
+    setLastSubmittedOrder(newOrder);
+
+    // Reset fields & clear cart
+    clearCart();
+    setFullName('');
+    setPhone('');
+    setEmail('');
+    setAddress('');
+    setNote('');
+
+    // Navigate to confirmation page
+    handleNavigate('order-confirmation');
+  };
+
+  // --- CONTACT SUBMISSION ---
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactName || !contactEmail || !contactMsgText) return;
+
+    const newMessage: ContactMessage = {
+      id: `msg-${Date.now()}`,
+      name: contactName,
+      email: contactEmail,
+      message: contactMsgText,
+      dateCreated: new Date().toLocaleDateString()
+    };
+
+    const updated = [newMessage, ...contactMessages];
+    saveMessages(updated);
+
+    // Reset forms
+    setContactName('');
+    setContactEmail('');
+    setContactMsgText('');
+    setContactSubmitted(true);
+
+    setTimeout(() => {
+      setContactSubmitted(false);
+    }, 5000);
+  };
+
+  // --- DYNAMIC PRODUCT SELECTION ---
+  const handleProductClick = (product: Product) => {
+    setSelectedProductId(product.id);
+    handleAddToRecentlyViewed(product.id);
+    setCurrentPage('shop');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const activeProduct = products.find(p => p.id === selectedProductId);
+
+  // --- FILTERING LOGIC ---
+  const filteredProducts = products.filter(p => {
+    const matchesCategory = activeCategoryFilter === 'all' || p.category === activeCategoryFilter;
+    const matchesCondition = activeConditionFilter === 'all' || p.condition === activeConditionFilter;
+
+    // Size parsing (rough filter)
+    let matchesSize = true;
+    if (activeSizeFilter !== 'all') {
+      const sizeLower = p.size.toLowerCase().trim();
+      const filterLower = activeSizeFilter.toLowerCase();
+      if (filterLower === 's') {
+        matchesSize = sizeLower === 's' || sizeLower.startsWith('s ') || sizeLower.startsWith('s(') || sizeLower.includes('(s') || sizeLower.includes('s-');
+      } else if (filterLower === 'm') {
+        matchesSize = sizeLower === 'm' || sizeLower.startsWith('m ') || sizeLower.startsWith('m(') || sizeLower.includes('(m') || sizeLower.includes('m-');
+      } else if (filterLower === 'l') {
+        matchesSize = sizeLower === 'l' || sizeLower.startsWith('l ') || sizeLower.startsWith('l(') || sizeLower.includes('(l') || sizeLower.includes('l-');
+      } else if (filterLower === 'xl') {
+        matchesSize = sizeLower.includes('xl');
+      } else if (filterLower === 'kids') {
+        matchesSize = p.category === 'kids' || sizeLower.includes('y') || sizeLower.includes('years') || sizeLower.includes('t');
+      }
+    }
+
+    return matchesCategory && matchesCondition && matchesSize;
+  });
+
+  // Unique sizes & conditions for dropdown listing dynamically
+  const uniqueSizes = ['all', 'S', 'M', 'L', 'XL', 'kids'];
+  const uniqueConditions = ['all', 'Like New', 'Gently Loved', 'Well-Loved'];
+
+  // Render Recently Viewed Items Section
+  const renderRecentlyViewedSection = () => {
+    if (recentlyViewed.length === 0) return null;
+
+    // Resolve products
+    const viewedProducts = recentlyViewed
+      .map(id => products.find(p => p.id === id))
+      .filter((p): p is Product => !!p);
+
+    if (viewedProducts.length === 0) return null;
+
+    return (
+      <div className="space-y-6 pt-12">
+        <div className="border-b border-[#E5E3DE] pb-4">
+          <h3 className="font-heading text-lg font-bold text-[#1C1C1A]">Recently Viewed Finds</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {viewedProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onClick={handleProductClick}
+              isSaved={wishlist.includes(product.id)}
+              onToggleSave={handleToggleWishlist}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-bg-primary flex flex-col noise-overlay">
+      <AnimatePresence>
+        {appLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 z-[9999] bg-[#FAF9F5] flex flex-col items-center justify-center noise-overlay overflow-hidden"
+            key="app-loader"
+          >
+            <div className="text-center space-y-5 max-w-sm px-6">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-2"
+              >
+                <span className="block font-serif italic text-accent text-sm tracking-wide">
+                  Est. 2022
+                </span>
+                <h1 className="font-heading text-6xl font-extrabold tracking-[-0.04em] text-text-primary">
+                  ETZ
+                </h1>
+              </motion.div>
+              
+              <div className="w-16 h-[1.5px] bg-[#2D6A4F]/20 mx-auto overflow-hidden relative">
+                <motion.div
+                  initial={{ left: '-100%' }}
+                  animate={{ left: '100%' }}
+                  transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
+                  className="absolute top-0 bottom-0 w-1/2 bg-[#2D6A4F]"
+                />
+              </div>
+
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="text-[10px] font-mono tracking-[0.25em] text-text-secondary/80 uppercase leading-relaxed"
+              >
+                Good clothes • Already lived in
+              </motion.p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* HEADER COMPONENT */}
+      <Header
+        currentPage={currentPage}
+        cartCount={cart.length}
+        wishlistCount={wishlist.length}
+        onNavigate={handleNavigate}
+      />
+
+      {/* MAIN CONTENT PORT PORTION WITH TRANSITIONS */}
+      <main className="flex-grow w-full">
+        <AnimatePresence mode="wait">
+          {/* A. HOMEPAGE */}
+          {currentPage === 'home' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35 }}
+              key="home"
+            >
+              <Home
+                onNavigate={handleNavigate}
+                products={products}
+                wishlist={wishlist}
+                onToggleSave={handleToggleWishlist}
+                recentlyViewed={recentlyViewed}
+                handleProductClick={handleProductClick}
+                renderRecentlyViewedSection={renderRecentlyViewedSection}
+              />
+            </motion.div>
+          )}
+
+          {/* B. SHOP PAGE */}
+          {currentPage === 'shop' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="shop"
+            >
+              <Shop
+                products={products}
+                cart={cart}
+                wishlist={wishlist}
+                recentlyViewed={recentlyViewed}
+                selectedProductId={selectedProductId}
+                setSelectedProductId={setSelectedProductId}
+                activeCategoryFilter={activeCategoryFilter}
+                setActiveCategoryFilter={setActiveCategoryFilter}
+                activeConditionFilter={activeConditionFilter}
+                setActiveConditionFilter={setActiveConditionFilter}
+                activeSizeFilter={activeSizeFilter}
+                setActiveSizeFilter={setActiveSizeFilter}
+                onNavigate={handleNavigate}
+                handleAddToCart={handleAddToCart}
+                handleToggleWishlist={handleToggleWishlist}
+                handleProductClick={handleProductClick}
+                renderRecentlyViewedSection={renderRecentlyViewedSection}
+              />
+            </motion.div>
+          )}
+
+          {/* C. WISHLIST */}
+          {currentPage === 'wishlist' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="wishlist"
+            >
+              <Wishlist
+                products={products}
+                wishlist={wishlist}
+                handleProductClick={handleProductClick}
+                handleToggleWishlist={handleToggleWishlist}
+                handleAddToCart={handleAddToCart}
+                onNavigate={handleNavigate}
+              />
+            </motion.div>
+          )}
+
+          {/* D. HOW IT WORKS */}
+          {currentPage === 'how-it-works' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="how-it-works"
+            >
+              <HowItWorks onNavigate={handleNavigate} />
+            </motion.div>
+          )}
+
+          {/* E. ABOUT */}
+          {currentPage === 'about' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="about"
+            >
+              <About onNavigate={handleNavigate} />
+            </motion.div>
+          )}
+
+          {/* F. FAQ */}
+          {currentPage === 'faq' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="faq"
+            >
+              <FAQ onNavigate={handleNavigate} />
+            </motion.div>
+          )}
+
+          {/* G. CONTACT */}
+          {currentPage === 'contact' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="contact"
+            >
+              <Contact
+                shopPhone={shopPhone}
+                shopEmail={shopEmail}
+                shopFacebook={shopFacebook}
+                shopGcash={shopGcash}
+                contactName={contactName}
+                setContactName={setContactName}
+                contactEmail={contactEmail}
+                setContactEmail={setContactEmail}
+                contactMsgText={contactMsgText}
+                setContactMsgText={setContactMsgText}
+                contactSubmitted={contactSubmitted}
+                handleContactSubmit={handleContactSubmit}
+                onNavigate={handleNavigate}
+              />
+            </motion.div>
+          )}
+
+          {/* H. CART */}
+          {currentPage === 'cart' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="cart"
+            >
+              <Cart
+                cart={cart}
+                handleRemoveFromCart={handleRemoveFromCart}
+                onNavigate={handleNavigate}
+              />
+            </motion.div>
+          )}
+
+          {/* I. CHECKOUT */}
+          {currentPage === 'checkout' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="checkout"
+            >
+              <Checkout
+                cart={cart}
+                fullName={fullName}
+                setFullName={setFullName}
+                phone={phone}
+                setPhone={setPhone}
+                email={email}
+                setEmail={setEmail}
+                deliveryMethod={deliveryMethod}
+                setDeliveryMethod={setDeliveryMethod}
+                address={address}
+                setAddress={setAddress}
+                contactMethod={contactMethod}
+                setContactMethod={setContactMethod}
+                note={note}
+                setNote={setNote}
+                shopGcash={shopGcash}
+                handlePlaceOrder={handlePlaceOrder}
+                onNavigate={handleNavigate}
+              />
+            </motion.div>
+          )}
+
+          {/* J. ORDER CONFIRMATION */}
+          {currentPage === 'order-confirmation' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="order-confirmation"
+            >
+              <OrderConfirmation
+                lastSubmittedOrder={lastSubmittedOrder}
+                shopGcash={shopGcash}
+                onNavigate={handleNavigate}
+              />
+            </motion.div>
+          )}
+
+          {/* K. PRIVACY */}
+          {currentPage === 'privacy' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              key="privacy"
+            >
+              <PrivacyPolicy onNavigate={handleNavigate} />
+            </motion.div>
+          )}
+
+          {/* L. TERMS */}
+          {currentPage === 'terms' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              key="terms"
+            >
+              <TermsOfService onNavigate={handleNavigate} />
+            </motion.div>
+          )}
+
+          {/* M. ADMIN PANEL */}
+          {currentPage === 'admin' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="admin"
+            >
+              <AdminPanel
+                token=""
+                onLogout={() => {}}
+                products={products}
+                orders={orders}
+                contactMessages={contactMessages}
+                shopEmail={shopEmail}
+                shopPhone={shopPhone}
+                shopFacebook={shopFacebook}
+                shopGcash={shopGcash}
+                onUpdateProduct={handleUpdateProduct}
+                onAddProduct={handleAddProduct}
+                onDeleteProduct={handleDeleteProduct}
+                onUpdateSettings={handleUpdateSettings}
+                onResetDatabase={handleResetDatabase}
+                showToast={showToast}
+                showConfirmDialog={showConfirmDialog}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* FOOTER COMPONENT */}
+      <Footer
+        onNavigate={handleNavigate}
+        shopEmail={shopEmail}
+        shopPhone={shopPhone}
+        shopFacebook={shopFacebook}
+      />
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+            className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm max-w-sm ${toast.type === 'success'
+                ? 'bg-white border-[#2D6A4F]/20 text-[#1C1C1A]'
+                : toast.type === 'error'
+                  ? 'bg-white border-red-200 text-red-700'
+                  : 'bg-white border-[#EBE9E3] text-[#1C1C1A]'
+              }`}
+          >
+            {toast.type === 'success' && <Check className="w-5 h-5 text-[#2D6A4F] shrink-0" />}
+            {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />}
+            {toast.type === 'info' && <AlertCircle className="w-5 h-5 text-[#D4A853] shrink-0" />}
+            <span className="font-semibold">{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Confirmation Modal */}
+      <AnimatePresence>
+        {confirmDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmDialog(null)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+            />
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+              className="relative w-full max-w-md bg-white border border-[#E5E3DE] rounded-2xl p-6 shadow-xl z-10 space-y-4"
+            >
+              <h3 className="font-heading text-lg font-bold text-[#1C1C1A]">Are you sure?</h3>
+              <p className="text-sm text-[#6B6B65] leading-relaxed">{confirmDialog.message}</p>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setConfirmDialog(null)}
+                  className="px-4 py-2 text-xs font-semibold text-[#6B6B65] hover:text-[#1C1C1A] hover:bg-[#EBE9E3] rounded-lg transition-colors cursor-pointer bg-transparent border-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    confirmDialog.onConfirm();
+                    setConfirmDialog(null);
+                  }}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-[#2D6A4F] hover:bg-[#245840] rounded-lg transition-colors cursor-pointer border-none shadow-sm"
+                >
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+}

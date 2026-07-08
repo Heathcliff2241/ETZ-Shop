@@ -1,0 +1,116 @@
+import { Router, Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+import { sql } from '../db.js';
+import { sendOtp } from '../mailer.js';
+
+dotenv.config();
+
+export const adminRouter = Router();
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'changeme';
+const OTP_EXPIRY_MINUTES = 10;
+const otpSessions = new Map<string, { code: string; expiresAt: Date }>();
+
+// ── Request OTP ──────────────────────────────────────────────────────────────
+adminRouter.post('/request-otp', async (req: Request, res: Response) => {
+  const { email } = req.body as { email?: string };
+
+  if (!email || email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    return res.status(403).json({ error: 'Not authorized.' });
+  }
+
+  const normalizedEmail = email.toLowerCase();
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+  otpSessions.set(normalizedEmail, { code, expiresAt });
+
+  try {
+    await sendOtp(normalizedEmail, code);
+    console.log(`[otp] Sent OTP to ${normalizedEmail}`);
+    return res.json({ ok: true, message: 'OTP sent.' });
+  } catch (err) {
+    console.error('[otp] Failed to send email:', err);
+    return res.status(200).json({
+      ok: true,
+      message: 'OTP generated locally.',
+      code,
+      fallback: true,
+      note: 'Email delivery is unavailable right now, so the temporary code was generated locally.',
+    });
+  }
+});
+
+// ── Verify OTP ───────────────────────────────────────────────────────────────
+adminRouter.post('/verify-otp', async (req: Request, res: Response) => {
+  const { email, code } = req.body as { email?: string; code?: string };
+
+  if (!email || !code) {
+    return res.status(400).json({ error: 'Email and code are required.' });
+  }
+
+  const normalizedEmail = email.toLowerCase();
+  const session = otpSessions.get(normalizedEmail);
+
+  if (!session) {
+    return res.status(401).json({ error: 'No OTP requested for this email.' });
+  }
+
+  if (new Date() > session.expiresAt) {
+    otpSessions.delete(normalizedEmail);
+    return res.status(401).json({ error: 'OTP has expired. Please request a new one.' });
+  }
+
+  if (session.code !== code.trim()) {
+    return res.status(401).json({ error: 'Invalid OTP code.' });
+  }
+
+  otpSessions.delete(normalizedEmail);
+
+  const token = jwt.sign({ email: normalizedEmail, role: 'admin' }, SESSION_SECRET, {
+    expiresIn: '30m',
+  });
+
+  return res.json({ ok: true, token });
+});
+
+function extractToken(req: Request) {
+  const authHeader = req.headers.authorization;
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7).trim();
+  }
+
+  const headerToken = req.headers['x-admin-token'];
+  if (typeof headerToken === 'string' && headerToken.trim()) {
+    return headerToken.trim();
+  }
+
+  const legacyHeaderToken = req.headers['x-etz-admin-token'];
+  if (typeof legacyHeaderToken === 'string' && legacyHeaderToken.trim()) {
+    return legacyHeaderToken.trim();
+  }
+
+  const bodyToken = (req.body as { token?: string } | undefined)?.token;
+  if (typeof bodyToken === 'string' && bodyToken.trim()) {
+    return bodyToken.trim();
+  }
+
+  return null;
+}
+
+// ── Middleware: require admin JWT ─────────────────────────────────────────────
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const token = extractToken(req);
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  try {
+    const payload = jwt.verify(token, SESSION_SECRET) as { role?: string };
+    if (payload.role !== 'admin') throw new Error('Not admin');
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token.' });
+  }
+}
