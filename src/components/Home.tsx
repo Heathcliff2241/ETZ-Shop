@@ -38,6 +38,14 @@ export default function Home({
           <div className="absolute inset-0 bg-black/40 md:hidden block" />
         </div>
 
+        <div className="absolute inset-0 z-20 pointer-events-none">
+          <img
+            src="/images/hero2-overlay.png"
+            alt=""
+            className="w-full h-full object-contain object-center opacity-90"
+          />
+        </div>
+
         {/* Bold and Confident Text Content */}
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-12 md:px-16 lg:px-20 text-left">
           <div className="max-w-3xl">
