@@ -80,7 +80,7 @@ ordersRouter.post('/', asyncHandler(async (req: Request, res: Response) => {
       status: 'pending',
       subtotal: Number(o.subtotal),
       items: Array.isArray(items) ? items.map((item) => ({ productName: typeof item.productName === 'string' ? item.productName : undefined, productId: typeof item.productId === 'string' ? item.productId : undefined })) : [],
-    });
+    }, true);
   } catch (error) {
     console.warn('[orders] Failed to send order notification.', error);
   }
@@ -129,7 +129,7 @@ ordersRouter.put('/:id/status', requireAdmin, asyncHandler(async (req: Request, 
       status,
       subtotal: Number(order.subtotal || 0),
       items: Array.isArray(order.items) ? order.items as Array<{ productName?: string; productId?: string }> : [],
-    });
+    }, false);
   } catch (error) {
     console.warn('[orders] Failed to send order status notification.', error);
   }

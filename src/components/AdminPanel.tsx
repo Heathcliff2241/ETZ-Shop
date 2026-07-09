@@ -76,46 +76,102 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const [description, setDescription] = useState('');
   const [isSold, setIsSold] = useState(false);
 
+  const playNotificationSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Dual-tone chime
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      gain1.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start();
+      osc1.stop(audioCtx.currentTime + 0.3);
+
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.1); // A5
+      gain2.gain.setValueAtTime(0.0, audioCtx.currentTime);
+      gain2.gain.setValueAtTime(0.12, audioCtx.currentTime + 0.1);
+      gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start(audioCtx.currentTime + 0.1);
+      osc2.stop(audioCtx.currentTime + 0.45);
+    } catch (e) {
+      console.warn('AudioContext blocked or failed:', e);
+    }
+  };
+
   // ── Toast helper ────────────────────────────────────────────────────────────
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 4500);
   };
 
   // ── Fetch products ──────────────────────────────────────────────────────────
-  const fetchProducts = useCallback(async () => {
-    setProductsLoading(true);
+  const fetchProducts = useCallback(async (silent = false) => {
+    if (!silent) setProductsLoading(true);
     try {
       const res = await fetch('/api/products');
       if (!res.ok) throw new Error('Failed to fetch products');
       const data = await res.json();
       setProducts(data);
     } catch {
-      showToast('Could not load products.', 'error');
+      if (!silent) showToast('Could not load products.', 'error');
     } finally {
-      setProductsLoading(false);
+      if (!silent) setProductsLoading(false);
     }
   }, []);
 
   // ── Fetch orders ────────────────────────────────────────────────────────────
-  const fetchOrders = useCallback(async () => {
-    setOrdersLoading(true);
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) setOrdersLoading(true);
     try {
       const res = await fetch('/api/orders', { headers: authHeaders(token) });
       if (!res.ok) throw new Error('Unauthorized');
-      const data = await res.json();
-      setOrders(data);
+      const data: Order[] = await res.json();
+      
+      setOrders(prevOrders => {
+        // If we have previous orders loaded, and we found new ones that aren't present in previous list
+        if (prevOrders && prevOrders.length > 0) {
+          const newOrders = data.filter(item => !prevOrders.some(p => p.id === item.id));
+          if (newOrders.length > 0) {
+            playNotificationSound();
+            newOrders.forEach(o => {
+              showToast(`🚨 New Order #${o.id.slice(-6).toUpperCase()} received from ${o.customerName}! (₱${o.subtotal.toLocaleString()})`, 'success');
+            });
+          }
+        }
+        return data;
+      });
     } catch {
-      showToast('Could not load orders. Token may have expired.', 'error');
+      if (!silent) showToast('Could not load orders. Token may have expired.', 'error');
     } finally {
-      setOrdersLoading(false);
+      if (!silent) setOrdersLoading(false);
     }
   }, [token]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  // Initial Fetch on mount
   useEffect(() => {
-    if (activeTab === 'orders') fetchOrders();
-  }, [activeTab, fetchOrders]);
+    fetchProducts();
+    fetchOrders();
+  }, [fetchProducts, fetchOrders]);
+
+  // Polling for real-time order & product sync
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchProducts(true);
+      fetchOrders(true);
+    }, 6000); // Poll every 6 seconds for super-responsive updates
+
+    return () => clearInterval(timer);
+  }, [fetchProducts, fetchOrders]);
 
   // ── Form reset ──────────────────────────────────────────────────────────────
   const resetForm = () => {

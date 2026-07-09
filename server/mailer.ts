@@ -37,20 +37,24 @@ export async function sendOtp(toEmail: string, code: string): Promise<void> {
   });
 }
 
-export async function sendOrderNotification(order: {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  status: string;
-  subtotal: number;
-  items: Array<{ productName?: string; productId?: string }>;
-}): Promise<void> {
+export async function sendOrderNotification(
+  order: {
+    id: string;
+    customerName: string;
+    customerEmail: string;
+    status: string;
+    subtotal: number;
+    items: Array<{ productName?: string; productId?: string }>;
+  },
+  notifyAdmin: boolean = false
+): Promise<void> {
   if (!isMailConfigured()) {
     console.warn(`
-[SMTP NOTIFICATION MOCK] Order ${order.id} placed/updated successfully!
-  - Customer: ${order.customerName} (${order.customerEmail})
-  - Subtotal: ₱${order.subtotal}
-  - Status: ${order.status.toUpperCase()}
+[SMTP NOTIFICATION MOCK] Order ${order.id} status updated to ${order.status.toUpperCase()}!
+  - Target: ${notifyAdmin ? 'Both Admin and Customer' : 'Customer Only'}
+  - Customer Email: ${order.customerEmail}
+  - Customer Name: ${order.customerName}
+  - Subtotal: ₱${order.subtotal.toLocaleString()}
   - Items: ${order.items.map((item) => item.productName || item.productId || 'Item').join(', ')}
   * Note: To enable real customer and admin email delivery, please configure SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS in the secrets menu.
     `);
@@ -98,7 +102,7 @@ export async function sendOrderNotification(order: {
 
   switch (order.status) {
     case 'confirmed':
-      statusBadgeColor = '#15803d'; // green
+      statusBadgeColor = '#4f46e5'; // indigo
       customerMessage = `Great news! Your reservation request has been officially <strong>CONFIRMED</strong> by our team. We have inspected your hand-selected 1-of-1 items under high-intensity light and packed them securely. They are now officially set aside for you and ready for handover!`;
       nextStepsHtml = `
         <li style="margin-bottom: 6px;"><strong>Coordinate Handover:</strong> We will contact you shortly via SMS or Messenger to align on your preferred pickup time in Loong, Tabogon, or finalize courier/shipping details if you chose delivery.</li>
@@ -106,8 +110,17 @@ export async function sendOrderNotification(order: {
         <li style="margin-bottom: 6px;"><strong>Enjoy your new wear:</strong> Your pre-loved items are freshly sanitized and ready to wear!</li>
       `;
       break;
+    case 'shipped':
+      statusBadgeColor = '#9333ea'; // purple
+      customerMessage = `Exciting news! Your curated garments are now on their way! They have been securely handed over to our shipping partner or courier and are officially <strong>SHIPPED</strong>.`;
+      nextStepsHtml = `
+        <li style="margin-bottom: 6px;"><strong>Delivery in Progress:</strong> Your package is being transported to your specified address. Please ensure someone is available to receive the package.</li>
+        <li style="margin-bottom: 6px;"><strong>Courier Coordination:</strong> Our courier or shipping partner will reach out to you via SMS or phone call upon arrival.</li>
+        <li style="margin-bottom: 6px;"><strong>Inspect on Arrival:</strong> When your beautifully-sorted thrift gems arrive, open them up and enjoy your sustainable new pieces!</li>
+      `;
+      break;
     case 'delivered':
-      statusBadgeColor = '#1d4ed8'; // blue
+      statusBadgeColor = '#059669'; // emerald
       customerMessage = `Your order has been officially marked as <strong>DELIVERED & COMPLETED</strong>! We hope these beautiful pieces bring you joy and a great fit. Thank you for supporting sustainable 1-of-1 fashion here in Cebu.`;
       nextStepsHtml = `
         <li style="margin-bottom: 6px;"><strong>Give them love:</strong> Wear them with pride! You have officially given these beautiful garments their next chapter.</li>
@@ -116,7 +129,7 @@ export async function sendOrderNotification(order: {
       `;
       break;
     case 'cancelled':
-      statusBadgeColor = '#4b5563'; // gray
+      statusBadgeColor = '#dc2626'; // red
       customerMessage = `Your reservation request for this order has been <strong>CANCELLED</strong>. The items have been returned to our public rack so other customers can discover them. If you did not request this cancellation or have any questions, please reply to this email or reach out to us.`;
       nextStepsHtml = `
         <li style="margin-bottom: 6px;"><strong>Find another fit:</strong> Explore our shop again! We add new carefully-sorted items weekly.</li>
@@ -183,6 +196,17 @@ export async function sendOrderNotification(order: {
     </div>
   `;
 
-  await transporter.sendMail({ from: `"ETZ" <${process.env.SMTP_USER}>`, to: adminEmail, subject, html: adminHtml });
-  await transporter.sendMail({ from: `"ETZ" <${process.env.SMTP_USER}>`, to: order.customerEmail, subject: `Your ETZ Reservation ${order.id} is ${order.status.toUpperCase()}`, html: customerHtml });
+  if (notifyAdmin) {
+    try {
+      await transporter.sendMail({ from: `"ETZ" <${process.env.SMTP_USER}>`, to: adminEmail, subject, html: adminHtml });
+    } catch (err) {
+      console.warn('Failed to send admin notification email:', err);
+    }
+  }
+
+  try {
+    await transporter.sendMail({ from: `"ETZ" <${process.env.SMTP_USER}>`, to: order.customerEmail, subject: `Your ETZ Reservation ${order.id} is ${order.status.toUpperCase()}`, html: customerHtml });
+  } catch (err) {
+    console.warn('Failed to send customer notification email:', err);
+  }
 }
