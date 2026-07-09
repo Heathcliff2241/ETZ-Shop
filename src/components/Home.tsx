@@ -25,13 +25,13 @@ export default function Home({
   return (
     <div className="w-full flex flex-col gap-16 pb-16" id="homepage-view">
       {/* Full-Bleed Minimal Hero — premium editorial typography, text positioning fit beautifully on the left */}
-      <div className="relative w-full min-h-[100dvh] flex items-center overflow-hidden bg-bg-primary select-none">
+      <div className="relative w-full min-h-[100svh] flex items-center overflow-hidden bg-bg-primary select-none">
         {/* Background Image — z-0. Colors left to breathe, no filter stack muting them. */}
         <div className="absolute inset-0 z-0">
           <img
             src="/images/hero2.png"
             alt="ETZ Lookbook Cover Model"
-            className="absolute inset-0 w-full h-full object-cover scale-101"
+            className="absolute inset-0 w-full h-full object-cover"
           />
           {/* Left-side dark gradient, lightened so it guides the eye without flattening color */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent md:block hidden" />
@@ -48,7 +48,7 @@ export default function Home({
           src="/images/hero2-overlay.png"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover scale-101 z-20 opacity-1000 pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover z-20 opacity-100 pointer-events-none"
         />
 
         {/* Headline — z-10. Sits BELOW the overlay, so the overlay effect shows on top of it only. */}
@@ -63,11 +63,11 @@ export default function Home({
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-10 font-sans font-bold text-white tracking-tighter leading-[0.9] text-5xl sm:text-7xl md:text-8xl lg:text-[7.5rem] text-balance text-left"
+                className="relative z-10 font-sans font-bold text-white tracking-tighter leading-[0.85] text-[3.35rem] sm:text-7xl md:text-8xl lg:text-[7.5rem] text-balance text-left"
               >
                 Good clothes.
                 <br />
-                <span className="font-cursive text-accent-warm tracking-normal text-5xl sm:text-7xl md:text-8xl lg:text-[8.5rem] mt-3 block normal-case font-normal select-none leading-none">
+                <span className="font-cursive text-accent-warm tracking-normal text-[3.15rem] sm:text-7xl md:text-8xl lg:text-[8.5rem] mt-3 block normal-case font-normal select-none leading-none">
                   Already lived in.
                 </span>
               </motion.h1>
