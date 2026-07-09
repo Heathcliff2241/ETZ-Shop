@@ -87,6 +87,7 @@ function toProduct(row: Record<string, unknown>) {
     description: String(row.description ?? ''),
     isSold: Boolean(row.is_sold !== undefined ? row.is_sold : (row.isSold !== undefined ? row.isSold : (Number(row.currentStock ?? 1) <= 0))),
     dateAdded: String(row.date_added ?? row.createdAt ?? row.dateAdded ?? ''),
+    soldAt: row.sold_at ? String(row.sold_at) : (row.soldAt ? String(row.soldAt) : undefined),
   };
 }
 
@@ -97,7 +98,7 @@ async function getProductsFromDb() {
 
   try {
     const rows = await sql.query(
-      'SELECT id, name, description, price, category, size, condition, condition_note, quantity, images, is_sold, date_added FROM etz_products ORDER BY date_added DESC'
+      'SELECT id, name, description, price, category, size, condition, condition_note, quantity, images, is_sold, sold_at, date_added FROM etz_products ORDER BY date_added DESC'
     ) as Array<Record<string, unknown>>;
     return rows.map(toProduct);
   } catch (error) {
@@ -161,7 +162,7 @@ productsRouter.get('/:id', asyncHandler(async (req: Request, res: Response) => {
 
   try {
     const rows = await sql.query(
-      'SELECT id, name, description, price, category, size, condition, condition_note, quantity, images, is_sold, date_added FROM etz_products WHERE id = $1',
+      'SELECT id, name, description, price, category, size, condition, condition_note, quantity, images, is_sold, sold_at, date_added FROM etz_products WHERE id = $1',
       [req.params.id]
     ) as Array<Record<string, unknown>>;
     if (rows.length === 0) return res.status(404).json({ error: 'Not found.' });
@@ -202,10 +203,10 @@ productsRouter.post('/', requireAdmin, asyncHandler(async (req: Request, res: Re
     const rows = await sql.query(
       `
         INSERT INTO etz_products
-          (id, name, price, category, size, condition, condition_note, quantity, images, description, is_sold, date_added)
+          (id, name, price, category, size, condition, condition_note, quantity, images, description, is_sold, sold_at, date_added)
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        RETURNING id, name, price, category, size, condition, condition_note, quantity, images, description, is_sold, date_added
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        RETURNING id, name, price, category, size, condition, condition_note, quantity, images, description, is_sold, sold_at, date_added
       `,
       [
         id,
@@ -219,6 +220,7 @@ productsRouter.post('/', requireAdmin, asyncHandler(async (req: Request, res: Re
         imageUrls,
         String(p.description || ''),
         false,
+        null,
         now
       ]
     ) as Array<Record<string, unknown>>;
@@ -256,9 +258,14 @@ productsRouter.put('/:id', requireAdmin, asyncHandler(async (req: Request, res: 
           quantity = CASE WHEN $7::integer IS NOT NULL THEN $7::integer ELSE quantity END,
           images = CASE WHEN $8::text[] IS NOT NULL THEN $8::text[] ELSE images END,
           description = CASE WHEN $9::text IS NOT NULL THEN $9::text ELSE description END,
-          is_sold = CASE WHEN $10::boolean IS NOT NULL THEN $10::boolean ELSE is_sold END
+          is_sold = CASE WHEN $10::boolean IS NOT NULL THEN $10::boolean ELSE is_sold END,
+          sold_at = CASE 
+            WHEN $10::boolean = TRUE THEN COALESCE(sold_at, $12::text)
+            WHEN $10::boolean = FALSE THEN NULL
+            ELSE sold_at
+          END
         WHERE id = $11
-        RETURNING id, name, price, category, size, condition, condition_note, quantity, images, description, is_sold, date_added
+        RETURNING id, name, price, category, size, condition, condition_note, quantity, images, description, is_sold, sold_at, date_added
       `,
       [
         p.name !== undefined ? String(p.name) : null,
@@ -272,6 +279,7 @@ productsRouter.put('/:id', requireAdmin, asyncHandler(async (req: Request, res: 
         p.description !== undefined ? String(p.description) : null,
         p.isSold !== undefined ? Boolean(p.isSold) : null,
         req.params.id,
+        new Date().toISOString()
       ]
     ) as Array<Record<string, unknown>>;
     if (rows.length === 0) return res.status(404).json({ error: 'Not found.' });

@@ -271,7 +271,15 @@ if (!sqlInstance) {
             if (values[6] !== null && values[6] !== undefined) product.quantity = Number(values[6]);
             if (values[7] !== null && values[7] !== undefined) product.images = Array.isArray(values[7]) ? values[7] : [];
             if (values[8] !== null && values[8] !== undefined) product.description = values[8];
-            if (values[9] !== null && values[9] !== undefined) product.is_sold = Boolean(values[9]);
+            if (values[9] !== null && values[9] !== undefined) {
+              const oldSold = product.is_sold;
+              product.is_sold = Boolean(values[9]);
+              if (product.is_sold && !oldSold) {
+                product.sold_at = values[11] || new Date().toISOString();
+              } else if (!product.is_sold) {
+                product.sold_at = null;
+              }
+            }
           }
           return product ? [product] : [];
         } else if (lowerQuery.includes('set is_sold =')) {
@@ -281,6 +289,7 @@ if (!sqlInstance) {
           const product = inMemoryDb.products.find(p => p.id === id);
           if (product) {
             product.is_sold = isSold;
+            product.sold_at = isSold ? new Date().toISOString() : null;
           }
           return [product];
         }
@@ -360,9 +369,16 @@ export async function initDb() {
         images TEXT[] DEFAULT '{}',
         description TEXT DEFAULT '',
         is_sold BOOLEAN DEFAULT FALSE,
+        sold_at TEXT,
         date_added TEXT
       )
     `;
+
+    try {
+      await sqlInstance`ALTER TABLE etz_products ADD COLUMN IF NOT EXISTS sold_at TEXT`;
+    } catch (e) {
+      console.warn('[db] Could not alter etz_products to add sold_at column:', e);
+    }
 
     await sqlInstance`
       CREATE TABLE IF NOT EXISTS etz_orders (

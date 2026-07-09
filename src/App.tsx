@@ -56,6 +56,30 @@ const safeSetItem = (key: string, value: any) => {
   }
 };
 
+const isProductExpiredSold = (product: Product): boolean => {
+  if (!product.isSold) return false;
+  const soldAtStr = product.soldAt || product.dateAdded;
+  if (!soldAtStr) return false;
+  try {
+    const soldDate = new Date(soldAtStr);
+    const diffTime = Date.now() - soldDate.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return diffDays > 7;
+  } catch {
+    return false;
+  }
+};
+
+const cleanupExpiredProducts = (list: Product[]): Product[] => {
+  return list.filter(p => {
+    if (isProductExpiredSold(p)) {
+      console.log(`[cleanup] Filtering out sold product (ID: ${p.id}) older than 7 days.`);
+      return false;
+    }
+    return true;
+  });
+};
+
 export default function App() {
   // --- STATE ---
   const [appLoading, setAppLoading] = useState<boolean>(true);
@@ -66,6 +90,7 @@ export default function App() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
+  const publicProducts = cleanupExpiredProducts(products);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
@@ -541,7 +566,7 @@ export default function App() {
 
     // Resolve products
     const viewedProducts = recentlyViewed
-      .map(id => products.find(p => p.id === id))
+      .map(id => publicProducts.find(p => p.id === id))
       .filter((p): p is Product => !!p);
 
     if (viewedProducts.length === 0) return null;
@@ -636,7 +661,7 @@ export default function App() {
             >
               <Home
                 onNavigate={handleNavigate}
-                products={products}
+                products={publicProducts}
                 wishlist={wishlist}
                 onToggleSave={handleToggleWishlist}
                 recentlyViewed={recentlyViewed}
@@ -656,7 +681,7 @@ export default function App() {
               key="shop"
             >
               <Shop
-                products={products}
+                products={publicProducts}
                 cart={cart}
                 wishlist={wishlist}
                 recentlyViewed={recentlyViewed}
@@ -687,7 +712,7 @@ export default function App() {
               key="wishlist"
             >
               <Wishlist
-                products={products}
+                products={publicProducts}
                 wishlist={wishlist}
                 handleProductClick={handleProductClick}
                 handleToggleWishlist={handleToggleWishlist}

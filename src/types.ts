@@ -15,6 +15,7 @@ export interface Product {
   description: string;
   isSold: boolean;
   dateAdded: string; // e.g., '2026-06-28'
+  soldAt?: string; // ISO timestamp when marked sold
 }
 
 export interface CartItem {

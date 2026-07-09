@@ -63,9 +63,10 @@ ordersRouter.post('/', asyncHandler(async (req: Request, res: Response) => {
        'pending', ${dateCreated})
   `;
 
+  const now = new Date().toISOString();
   for (const item of items as Array<{ productId?: string }> ) {
     if (item.productId) {
-      await sql`UPDATE etz_products SET is_sold = true WHERE id = ${item.productId}`;
+      await sql`UPDATE etz_products SET is_sold = true, sold_at = ${now} WHERE id = ${item.productId}`;
     }
   }
 
@@ -111,7 +112,7 @@ ordersRouter.put('/:id/status', requireAdmin, asyncHandler(async (req: Request, 
       const items = rows[0].items as { productId?: string }[];
       for (const item of items) {
         if (item.productId) {
-          await sql`UPDATE etz_products SET is_sold = false WHERE id = ${item.productId}`;
+          await sql`UPDATE etz_products SET is_sold = false, sold_at = NULL WHERE id = ${item.productId}`;
         }
       }
     }
