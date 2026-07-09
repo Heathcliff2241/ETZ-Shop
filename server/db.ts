@@ -51,7 +51,7 @@ try {
       return (neonClient as any)(strings, ...values);
     };
     wrapper.query = async (queryText: string, params?: any[]) => {
-      return (neonClient as any)(queryText, params || []);
+      return (neonClient as any).query(queryText, params || []);
     };
     sqlInstance = wrapper;
   } else {

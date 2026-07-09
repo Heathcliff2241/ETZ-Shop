@@ -45,7 +45,17 @@ export async function sendOrderNotification(order: {
   subtotal: number;
   items: Array<{ productName?: string; productId?: string }>;
 }): Promise<void> {
-  if (!isMailConfigured()) return;
+  if (!isMailConfigured()) {
+    console.warn(`
+[SMTP NOTIFICATION MOCK] Order ${order.id} placed/updated successfully!
+  - Customer: ${order.customerName} (${order.customerEmail})
+  - Subtotal: ₱${order.subtotal}
+  - Status: ${order.status.toUpperCase()}
+  - Items: ${order.items.map((item) => item.productName || item.productId || 'Item').join(', ')}
+  * Note: To enable real customer and admin email delivery, please configure SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS in the secrets menu.
+    `);
+    return;
+  }
 
   const itemSummary = order.items
     .map((item) => item.productName || item.productId || 'Item')

@@ -61,6 +61,7 @@ export default function App() {
 
   // Latest submitted order for confirmation screen
   const [lastSubmittedOrder, setLastSubmittedOrder] = useState<Order | null>(null);
+  const [isOrdering, setIsOrdering] = useState<boolean>(false);
 
   // Toast & custom confirmation modal state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -83,7 +84,7 @@ export default function App() {
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    // Products
+    // Products (Initially load from local storage cache, then fetch fresh ones from backend)
     const storedProducts = localStorage.getItem('etz_products');
     if (storedProducts) {
       setProducts(JSON.parse(storedProducts));
@@ -91,6 +92,22 @@ export default function App() {
       localStorage.setItem('etz_products', JSON.stringify(DEFAULT_PRODUCTS));
       setProducts(DEFAULT_PRODUCTS);
     }
+
+    const fetchFreshProducts = async () => {
+      try {
+        const res = await fetch('/api/products');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setProducts(data);
+            localStorage.setItem('etz_products', JSON.stringify(data));
+          }
+        }
+      } catch (err) {
+        console.warn('[app] Could not sync products with backend API:', err);
+      }
+    };
+    fetchFreshProducts();
 
     // Cart
     const storedCart = localStorage.getItem('etz_cart');
@@ -274,17 +291,19 @@ export default function App() {
   };
 
   // --- CHECKOUT PROCESS ---
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !phone || !email || (deliveryMethod === 'delivery' && !address)) {
       showToast('Please fill in all mandatory customer details.', 'error');
       return;
     }
 
+    if (isOrdering) return;
+    setIsOrdering(true);
+
     const subtotal = cart.reduce((acc, item) => acc + item.product.price, 0);
 
-    const newOrder: Order = {
-      id: `ETZ-${Math.floor(100000 + Math.random() * 900000)}`,
+    const orderPayload = {
       customerName: fullName,
       customerPhone: phone,
       customerEmail: email,
@@ -300,38 +319,105 @@ export default function App() {
         condition: item.product.condition,
         image: item.product.images[0]
       })),
-      subtotal,
-      status: 'pending',
-      dateCreated: new Date().toLocaleString()
+      subtotal
     };
 
-    // Save order
-    const updatedOrders = [newOrder, ...orders];
-    saveOrders(updatedOrders);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderPayload),
+      });
 
-    // Auto-mark ordered items as SOLD!
-    const cartProductIds = cart.map(item => item.product.id);
-    const updatedProducts = products.map(p => {
-      if (cartProductIds.includes(p.id)) {
-        return { ...p, isSold: true };
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to place order on the server.');
       }
-      return p;
-    });
-    saveProducts(updatedProducts);
 
-    // Save last submitted order for confirmation screen
-    setLastSubmittedOrder(newOrder);
+      const createdOrder = await res.json();
 
-    // Reset fields & clear cart
-    clearCart();
-    setFullName('');
-    setPhone('');
-    setEmail('');
-    setAddress('');
-    setNote('');
+      // Save order locally for user reference
+      const updatedOrders = [createdOrder, ...orders];
+      saveOrders(updatedOrders);
 
-    // Navigate to confirmation page
-    handleNavigate('order-confirmation');
+      // Auto-mark ordered items as SOLD locally
+      const cartProductIds = cart.map(item => item.product.id);
+      const updatedProducts = products.map(p => {
+        if (cartProductIds.includes(p.id)) {
+          return { ...p, isSold: true };
+        }
+        return p;
+      });
+      saveProducts(updatedProducts);
+
+      // Save last submitted order for confirmation screen
+      setLastSubmittedOrder(createdOrder);
+
+      // Reset fields & clear cart
+      clearCart();
+      setFullName('');
+      setPhone('');
+      setEmail('');
+      setAddress('');
+      setNote('');
+
+      showToast('Order request received successfully!', 'success');
+      handleNavigate('order-confirmation');
+
+      // Attempt to pull latest products in background
+      try {
+        const prodRes = await fetch('/api/products');
+        if (prodRes.ok) {
+          const freshData = await prodRes.json();
+          if (Array.isArray(freshData) && freshData.length > 0) {
+            setProducts(freshData);
+            localStorage.setItem('etz_products', JSON.stringify(freshData));
+          }
+        }
+      } catch (err) {
+        console.warn('[app] Background products refresh failed', err);
+      }
+    } catch (error: any) {
+      console.warn('[app] Backend place order failed, falling back to local reservation:', error);
+      
+      // Fallback local-only flow if backend is totally unreachable or errored
+      const fallbackId = `ETZ-${Math.floor(100000 + Math.random() * 900000)}`;
+      const fallbackOrder: Order = {
+        ...orderPayload,
+        id: fallbackId,
+        status: 'pending',
+        dateCreated: new Date().toLocaleString(),
+        items: orderPayload.items.map(item => ({ ...item, condition: item.condition as any }))
+      };
+
+      const updatedOrders = [fallbackOrder, ...orders];
+      saveOrders(updatedOrders);
+
+      const cartProductIds = cart.map(item => item.product.id);
+      const updatedProducts = products.map(p => {
+        if (cartProductIds.includes(p.id)) {
+          return { ...p, isSold: true };
+        }
+        return p;
+      });
+      saveProducts(updatedProducts);
+
+      setLastSubmittedOrder(fallbackOrder);
+
+      clearCart();
+      setFullName('');
+      setPhone('');
+      setEmail('');
+      setAddress('');
+      setNote('');
+
+      showToast('Order saved locally (Offline mode).', 'info');
+      handleNavigate('order-confirmation');
+    } finally {
+      setIsOrdering(false);
+    }
   };
 
   // --- CONTACT SUBMISSION ---
