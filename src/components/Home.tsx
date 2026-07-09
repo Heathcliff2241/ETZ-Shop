@@ -26,82 +26,96 @@ export default function Home({
     <div className="w-full flex flex-col gap-16 pb-16" id="homepage-view">
       {/* Full-Bleed Minimal Hero — premium editorial typography, text positioning fit beautifully on the left */}
       <div className="relative w-full min-h-[100dvh] flex items-center overflow-hidden bg-bg-primary select-none">
-        {/* Background Image */}
+        {/* Background Image — z-0. Colors left to breathe, no filter stack muting them. */}
         <div className="absolute inset-0 z-0">
           <img
             src="/images/hero2.png"
             alt="ETZ Lookbook Cover Model"
-            className="w-full h-full object-cover scale-101 filter brightness-[0.78] contrast-[1.08] saturate-[0.85]"
+            className="absolute inset-0 w-full h-full object-cover scale-101"
           />
-          {/* Left-side dark gradient to ensure text legibility and luxurious depth */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/45 to-transparent md:block hidden" />
-          <div className="absolute inset-0 bg-black/40 md:hidden block" />
+          {/* Left-side dark gradient, lightened so it guides the eye without flattening color */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent md:block hidden" />
+          <div className="absolute inset-0 bg-black/25 md:hidden block" />
         </div>
 
-        {/* Bold and Confident Text Content */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-12 md:px-16 lg:px-20 text-left">
-          <div className="max-w-3xl relative isolate">
-            <div className="absolute inset-0 z-0 pointer-events-none">
-              <img
-                src="/images/hero2-overlay.png"
-                alt=""
-                className="w-full h-full object-cover object-center opacity-90"
-              />
+        {/* Overlay Image — z-20. Full-bleed, same size as background, fully opaque (opacity-100 is
+            CSS opacity: 1, the max valid value — "opacity-1000" isn't a real Tailwind class and
+            gets silently ignored). This is a sibling of the content wrapper below, not nested
+            inside it, so inset-0 sizes it to the FULL hero, matching hero2.png exactly. It sits
+            ABOVE the headline (z-10) but BELOW the description/buttons (z-30) — see the note on
+            the content wrapper for why that comparison now works correctly. */}
+        <img
+          src="/images/hero2-overlay.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover scale-101 z-20 opacity-1000 pointer-events-none"
+        />
+
+        {/* Headline — z-10. Sits BELOW the overlay, so the overlay effect shows on top of it only. */}
+        {/* Bold and Confident Text Content — no z-index on this wrapper itself. That's the fix:
+            a wrapper with its own z-index caps everything inside it at that value, no matter what
+            z-index its children ask for. Leaving this wrapper unset lets each child (headline,
+            description, buttons) stack directly against the overlay below on its own terms. */}
+        <div className="relative w-full max-w-7xl mx-auto px-6 sm:px-12 md:px-16 lg:px-20">
+          <div className="w-full">
+            <div className="max-w-3xl">
+              <motion.h1
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+                className="relative z-10 font-sans font-bold text-white tracking-tighter leading-[0.9] text-5xl sm:text-7xl md:text-8xl lg:text-[7.5rem] text-balance text-left"
+              >
+                Good clothes.
+                <br />
+                <span className="font-cursive text-accent-warm tracking-normal text-5xl sm:text-7xl md:text-8xl lg:text-[8.5rem] mt-3 block normal-case font-normal select-none leading-none">
+                  Already lived in.
+                </span>
+              </motion.h1>
             </div>
 
-            {/* Title: Intentional pairing of modern heavy sans & delicate classic italic serif */}
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-              className="relative z-10 font-sans font-bold text-white tracking-tighter leading-[0.9] text-5xl sm:text-7xl md:text-8xl lg:text-[7.5rem] text-balance"
-            >
-              Good clothes.
-              <br />
-              <span className="font-cursive text-accent-warm tracking-normal text-5xl sm:text-7xl md:text-8xl lg:text-[8.5rem] mt-3 block normal-case font-normal select-none leading-none">
-                Already lived in.
-              </span>
-            </motion.h1>
+            <div className="mt-8 flex justify-center">
+              <div className="w-full max-w-md flex flex-col items-center text-center">
+                {/* Description — z-30, sits above the overlay */}
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 1.0, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative z-30 text-[14px] sm:text-[16px] text-white/80 leading-relaxed font-light tracking-wide font-sans text-balance"
+                >
+                  Hand-checked in Tabogon, Cebu. Every piece is inspected under high-intensity light for flaws, flat-measured for exact fit, and prepared for its next chapter.
+                </motion.p>
 
-            {/* Description */}
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.0, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-8 text-[14px] sm:text-[16px] text-white/80 max-w-md leading-relaxed font-light tracking-wide font-sans text-balance"
-            >
-              Hand-checked in Tabogon, Cebu. Every piece is inspected under high-intensity light for flaws, flat-measured for exact fit, and prepared for its next chapter.
-            </motion.p>
+                {/* CTA Buttons — z-30, sits above the overlay */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 1.0, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative z-30 mt-10 flex flex-col sm:flex-row gap-4 items-center justify-center"
+                >
+                  <button
+                    onClick={() => onNavigate('shop', 'all')}
+                    className="group relative bg-white hover:bg-neutral-100 text-text-primary font-semibold tracking-[0.1em] px-8 py-4 transition-all duration-300 ease-out active:scale-[0.98] cursor-pointer text-[11px] uppercase flex items-center justify-center gap-3 shadow-2xl rounded-none border-none"
+                  >
+                    <span>Shop the Rack</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 shrink-0" />
+                  </button>
 
-            {/* Sleek CTA Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.0, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-10 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center"
-            >
-              <button
-                onClick={() => onNavigate('shop', 'all')}
-                className="group relative bg-white hover:bg-neutral-100 text-text-primary font-semibold tracking-[0.1em] px-8 py-4 transition-all duration-300 ease-out active:scale-[0.98] cursor-pointer text-[11px] uppercase flex items-center justify-center gap-3 shadow-2xl rounded-none border-none"
-              >
-                <span>Shop the Rack</span>
-                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 shrink-0" />
-              </button>
-              
-              <button
-                onClick={() => onNavigate('how-it-works')}
-                className="group flex items-center justify-center gap-2 text-white hover:text-accent-warm text-[11px] tracking-[0.1em] uppercase font-semibold transition-all duration-300 cursor-pointer bg-transparent border border-white/20 hover:border-white/50 px-8 py-4 rounded-none"
-              >
-                <span>How It Works</span>
-              </button>
-            </motion.div>
+                  <button
+                    onClick={() => onNavigate('how-it-works')}
+                    className="group flex items-center justify-center gap-2 text-white hover:text-accent-warm text-[11px] tracking-[0.1em] uppercase font-semibold transition-all duration-300 cursor-pointer bg-transparent border border-white/20 hover:border-white/50 px-8 py-4 rounded-none"
+                  >
+                    <span>How It Works</span>
+                  </button>
+                </motion.div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Contained content wrapper */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-24">
-        
+
         {/* Why Shop Here Section (Refined Card-Free Editorial Layout) */}
         <div className="border-t border-b border-border/80 py-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-5 space-y-5">
@@ -296,7 +310,7 @@ export default function Home({
         <div className="bg-bg-deep text-white p-10 sm:p-16 rounded-xl relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-10 select-none shadow-xl border-none">
           {/* Noise effect */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(45,106,79,0.25),transparent)] pointer-events-none" />
-          
+
           <div className="space-y-4 max-w-2xl text-center lg:text-left relative z-10">
             <span className="text-[10px] tracking-[0.25em] uppercase font-bold text-accent-warm font-mono">// VISIT THE RACK IN CEBU</span>
             <h3 className="font-heading text-3xl sm:text-4xl text-white font-light tracking-tight leading-tight">
@@ -306,7 +320,7 @@ export default function Home({
               Skip shipping fees by arranging a convenient local pickup in Loong, Tabogon. We also arrange fast courier transport and regular shipping to all towns and cities across Cebu.
             </p>
           </div>
-          
+
           <div className="w-full lg:w-auto shrink-0 relative z-10">
             <button
               onClick={() => onNavigate('shop', 'all')}
