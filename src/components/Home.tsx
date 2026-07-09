@@ -25,13 +25,20 @@ export default function Home({
   return (
     <div className="w-full flex flex-col gap-16 pb-16" id="homepage-view">
       {/* Full-Bleed Minimal Hero — premium editorial typography, text positioning fit beautifully on the left */}
-      <div className="relative w-full min-h-[100svh] flex items-center overflow-hidden bg-bg-primary select-none">
+      <div className="relative w-full min-h-[100svh] flex items-start sm:items-center overflow-hidden bg-bg-primary select-none">
         {/* Background Image — z-0. Colors left to breathe, no filter stack muting them. */}
         <div className="absolute inset-0 z-0">
+          {/* Mobile Background */}
+          <img
+            src="/images/hero2mobile.png"
+            alt="ETZ Lookbook Cover Model"
+            className="absolute inset-0 w-full h-full object-cover sm:hidden block"
+          />
+          {/* Desktop Background */}
           <img
             src="/images/hero2.png"
             alt="ETZ Lookbook Cover Model"
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover hidden sm:block"
           />
           {/* Left-side dark gradient, lightened so it guides the eye without flattening color */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent md:block hidden" />
@@ -39,16 +46,22 @@ export default function Home({
         </div>
 
         {/* Overlay Image — z-20. Full-bleed, same size as background, fully opaque (opacity-100 is
-            CSS opacity: 1, the max valid value — "opacity-1000" isn't a real Tailwind class and
-            gets silently ignored). This is a sibling of the content wrapper below, not nested
-            inside it, so inset-0 sizes it to the FULL hero, matching hero2.png exactly. It sits
+            CSS opacity: 1, the max valid value). It sits
             ABOVE the headline (z-10) but BELOW the description/buttons (z-30) — see the note on
             the content wrapper for why that comparison now works correctly. */}
+        {/* Mobile Overlay */}
+        <img
+          src="/images/hero2mobile-overlay.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover z-20 opacity-100 pointer-events-none sm:hidden block"
+        />
+        {/* Desktop Overlay */}
         <img
           src="/images/hero2-overlay.png"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover z-20 opacity-100 pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover z-20 opacity-100 pointer-events-none hidden sm:block"
         />
 
         {/* Headline — z-10. Sits BELOW the overlay, so the overlay effect shows on top of it only. */}
@@ -56,58 +69,56 @@ export default function Home({
             a wrapper with its own z-index caps everything inside it at that value, no matter what
             z-index its children ask for. Leaving this wrapper unset lets each child (headline,
             description, buttons) stack directly against the overlay below on its own terms. */}
-        <div className="relative w-full max-w-7xl mx-auto px-6 sm:px-12 md:px-16 lg:px-20">
-          <div className="w-full">
-            <div className="max-w-3xl">
+        <div className="relative w-full max-w-7xl mx-auto px-6 sm:px-12 md:px-16 lg:px-20 pt-28 pb-12 sm:pt-0 sm:pb-0">
+          <div className="w-full flex flex-col items-start text-left">
+            <div className="max-w-xl sm:max-w-3xl">
               <motion.h1
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-10 font-sans font-bold text-white tracking-tighter leading-[0.85] text-[3.35rem] sm:text-7xl md:text-8xl lg:text-[7.5rem] text-balance text-left"
+                className="relative z-10 font-sans font-bold text-white tracking-tight leading-[0.9] text-[3.25rem] min-[380px]:text-[3.65rem] min-[420px]:text-[4rem] sm:text-7xl md:text-8xl lg:text-[7.5rem] text-balance text-left"
               >
                 Good clothes.
                 <br />
-                <span className="font-cursive text-accent-warm tracking-normal text-[3.15rem] sm:text-7xl md:text-8xl lg:text-[8.5rem] mt-3 block normal-case font-normal select-none leading-none">
+                <span className="font-cursive text-accent-warm tracking-wide text-[3.15rem] min-[380px]:text-[3.5rem] min-[420px]:text-[3.85rem] sm:text-7xl md:text-8xl lg:text-[8.5rem] mt-3 sm:mt-5 block normal-case font-normal select-none leading-none">
                   Already lived in.
                 </span>
               </motion.h1>
             </div>
 
-            <div className="mt-8 flex justify-center">
-              <div className="w-full max-w-md flex flex-col items-center text-center">
-                {/* Description — z-30, sits above the overlay */}
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 1.0, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="relative z-30 text-[14px] sm:text-[16px] text-white/80 leading-relaxed font-light tracking-wide font-sans text-balance"
-                >
-                  Hand-checked in Tabogon, Cebu. Every piece is inspected under high-intensity light for flaws, flat-measured for exact fit, and prepared for its next chapter.
-                </motion.p>
+            <div className="mt-6 sm:mt-8 w-full max-w-md flex flex-col items-start text-left">
+              {/* Description — z-30, sits above the overlay */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.0, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className="relative z-30 text-[13px] sm:text-[16px] text-white/90 leading-relaxed font-light tracking-wide font-sans text-balance drop-shadow-sm max-w-[320px] sm:max-w-none"
+              >
+                Hand-checked in Tabogon, Cebu. Every piece is inspected under high-intensity light for flaws, flat-measured for exact fit, and prepared for its next chapter.
+              </motion.p>
 
-                {/* CTA Buttons — z-30, sits above the overlay */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 1.0, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="relative z-30 mt-10 flex flex-col sm:flex-row gap-4 items-center justify-center"
+              {/* CTA Buttons — z-30, sits above the overlay */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.0, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="relative z-30 mt-8 flex flex-col sm:flex-row gap-3.5 items-stretch sm:items-center w-full sm:w-auto"
+              >
+                <button
+                  onClick={() => onNavigate('shop', 'all')}
+                  className="group relative bg-white hover:bg-neutral-100 text-text-primary font-semibold tracking-[0.1em] px-8 py-4 transition-all duration-300 ease-out active:scale-[0.98] cursor-pointer text-[11px] uppercase flex items-center justify-center gap-3 shadow-2xl rounded-none border-none"
                 >
-                  <button
-                    onClick={() => onNavigate('shop', 'all')}
-                    className="group relative bg-white hover:bg-neutral-100 text-text-primary font-semibold tracking-[0.1em] px-8 py-4 transition-all duration-300 ease-out active:scale-[0.98] cursor-pointer text-[11px] uppercase flex items-center justify-center gap-3 shadow-2xl rounded-none border-none"
-                  >
-                    <span>Shop the Rack</span>
-                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 shrink-0" />
-                  </button>
+                  <span>Shop the Rack</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 shrink-0" />
+                </button>
 
-                  <button
-                    onClick={() => onNavigate('how-it-works')}
-                    className="group flex items-center justify-center gap-2 text-white hover:text-accent-warm text-[11px] tracking-[0.1em] uppercase font-semibold transition-all duration-300 cursor-pointer bg-transparent border border-white/20 hover:border-white/50 px-8 py-4 rounded-none"
-                  >
-                    <span>How It Works</span>
-                  </button>
-                </motion.div>
-              </div>
+                <button
+                  onClick={() => onNavigate('how-it-works')}
+                  className="group flex items-center justify-center gap-2 text-white hover:text-accent-warm text-[11px] tracking-[0.1em] uppercase font-semibold transition-all duration-300 cursor-pointer bg-transparent border border-white/20 hover:border-white/50 px-8 py-4 rounded-none"
+                >
+                  <span>How It Works</span>
+                </button>
+              </motion.div>
             </div>
           </div>
         </div>
