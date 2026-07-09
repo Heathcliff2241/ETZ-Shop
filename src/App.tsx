@@ -23,6 +23,39 @@ import OrderConfirmation from './components/OrderConfirmation';
 import MyOrders from './components/MyOrders';
 import { PrivacyPolicy, TermsOfService } from './components/LegalPages';
 
+const cleanForStorage = <T,>(obj: T): T => {
+  try {
+    const str = JSON.stringify(obj);
+    const parsed = JSON.parse(str, (key, value) => {
+      if (typeof value === 'string' && value.startsWith('data:image/') && value.length > 2000) {
+        return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%23eee"/><text x="50%" y="50%" font-size="12" font-family="sans-serif" text-anchor="middle" dominant-baseline="middle" fill="%23999">Image</text></svg>';
+      }
+      return value;
+    });
+    return parsed;
+  } catch {
+    return obj;
+  }
+};
+
+const safeSetItem = (key: string, value: any) => {
+  try {
+    const cleaned = cleanForStorage(value);
+    localStorage.setItem(key, JSON.stringify(cleaned));
+  } catch (err) {
+    console.warn(`[localStorage] Failed to save key "${key}":`, err);
+    try {
+      const completelyCleaned = JSON.parse(JSON.stringify(value, (k, val) => {
+        if (k === 'image' || k === 'images' || k === 'url') return '';
+        return val;
+      }));
+      localStorage.setItem(key, JSON.stringify(completelyCleaned));
+    } catch (innerErr) {
+      console.warn(`[localStorage] Critical failure saving key "${key}":`, innerErr);
+    }
+  }
+};
+
 export default function App() {
   // --- STATE ---
   const [appLoading, setAppLoading] = useState<boolean>(true);
@@ -85,12 +118,26 @@ export default function App() {
 
   // --- INITIALIZATION ---
   useEffect(() => {
+    // Sanitize any bloated local storage values on startup immediately
+    ['etz_products', 'etz_cart', 'etz_orders'].forEach(key => {
+      try {
+        const stored = localStorage.getItem(key);
+        if (stored && (stored.includes('data:image/') || stored.length > 50000)) {
+          const parsed = JSON.parse(stored);
+          const cleaned = cleanForStorage(parsed);
+          localStorage.setItem(key, JSON.stringify(cleaned));
+        }
+      } catch (err) {
+        console.warn(`[startup] Failed to sanitize existing key ${key}:`, err);
+      }
+    });
+
     // Products (Initially load from local storage cache, then fetch fresh ones from backend)
     const storedProducts = localStorage.getItem('etz_products');
     if (storedProducts) {
       setProducts(JSON.parse(storedProducts));
     } else {
-      localStorage.setItem('etz_products', JSON.stringify(DEFAULT_PRODUCTS));
+      safeSetItem('etz_products', DEFAULT_PRODUCTS);
       setProducts(DEFAULT_PRODUCTS);
     }
 
@@ -101,7 +148,7 @@ export default function App() {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
             setProducts(data);
-            localStorage.setItem('etz_products', JSON.stringify(data));
+            safeSetItem('etz_products', data);
           }
         }
       } catch (err) {
@@ -168,32 +215,32 @@ export default function App() {
   // --- PERSISTENCE HELPERS ---
   const saveProducts = (updated: Product[]) => {
     setProducts(updated);
-    localStorage.setItem('etz_products', JSON.stringify(updated));
+    safeSetItem('etz_products', updated);
   };
 
   const saveCart = (updated: CartItem[]) => {
     setCart(updated);
-    localStorage.setItem('etz_cart', JSON.stringify(updated));
+    safeSetItem('etz_cart', updated);
   };
 
   const saveOrders = (updated: Order[]) => {
     setOrders(updated);
-    localStorage.setItem('etz_orders', JSON.stringify(updated));
+    safeSetItem('etz_orders', updated);
   };
 
   const saveMessages = (updated: ContactMessage[]) => {
     setContactMessages(updated);
-    localStorage.setItem('etz_messages', JSON.stringify(updated));
+    safeSetItem('etz_messages', updated);
   };
 
   const saveWishlist = (updated: string[]) => {
     setWishlist(updated);
-    localStorage.setItem('etz_wishlist', JSON.stringify(updated));
+    safeSetItem('etz_wishlist', updated);
   };
 
   const saveRecentlyViewed = (updated: string[]) => {
     setRecentlyViewed(updated);
-    localStorage.setItem('etz_recently_viewed', JSON.stringify(updated));
+    safeSetItem('etz_recently_viewed', updated);
   };
 
   const handleToggleWishlist = (productId: string, e?: React.MouseEvent) => {
@@ -374,7 +421,7 @@ export default function App() {
           const freshData = await prodRes.json();
           if (Array.isArray(freshData) && freshData.length > 0) {
             setProducts(freshData);
-            localStorage.setItem('etz_products', JSON.stringify(freshData));
+            saveProducts(freshData);
           }
         }
       } catch (err) {
