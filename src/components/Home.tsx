@@ -38,23 +38,23 @@ export default function Home({
           <div className="absolute inset-0 bg-black/40 md:hidden block" />
         </div>
 
-        <div className="absolute inset-0 z-20 pointer-events-none">
-          <img
-            src="/images/hero2-overlay.png"
-            alt=""
-            className="w-full h-full object-contain object-center opacity-90"
-          />
-        </div>
-
         {/* Bold and Confident Text Content */}
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-12 md:px-16 lg:px-20 text-left">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl relative isolate">
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <img
+                src="/images/hero2-overlay.png"
+                alt=""
+                className="w-full h-full object-cover object-center opacity-90"
+              />
+            </div>
+
             {/* Title: Intentional pairing of modern heavy sans & delicate classic italic serif */}
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-              className="font-sans font-bold text-white tracking-tighter leading-[0.9] text-5xl sm:text-7xl md:text-8xl lg:text-[7.5rem] text-balance"
+              className="relative z-10 font-sans font-bold text-white tracking-tighter leading-[0.9] text-5xl sm:text-7xl md:text-8xl lg:text-[7.5rem] text-balance"
             >
               Good clothes.
               <br />
