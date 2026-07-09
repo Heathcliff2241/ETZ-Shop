@@ -40,7 +40,7 @@ export interface Order {
     image: string;
   }[];
   subtotal: number;
-  status: 'pending' | 'confirmed' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
   dateCreated: string;
 }
 

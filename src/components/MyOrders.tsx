@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Package, Clock, CheckCircle2, ShoppingBag, MapPin, Phone, Mail, ArrowRight, CornerDownRight, XCircle } from 'lucide-react';
+import { Search, Package, Clock, CheckCircle2, ShoppingBag, MapPin, Phone, Mail, ArrowRight, CornerDownRight, XCircle, Truck } from 'lucide-react';
 import { Order } from '../types';
 
 interface MyOrdersProps {
@@ -44,11 +44,13 @@ export default function MyOrders({ onNavigate }: MyOrdersProps) {
       case 'pending':
         return 'bg-amber-50 text-amber-800 border-amber-200/60';
       case 'confirmed':
-        return 'bg-emerald-50 text-emerald-800 border-emerald-200/60';
+        return 'bg-indigo-50 text-indigo-800 border-indigo-200/60';
+      case 'shipped':
+        return 'bg-purple-50 text-purple-800 border-purple-200/60';
       case 'delivered':
-        return 'bg-blue-50 text-blue-800 border-blue-200/60';
+        return 'bg-emerald-50 text-emerald-800 border-emerald-200/60';
       case 'cancelled':
-        return 'bg-neutral-50 text-neutral-600 border-neutral-200/60 line-through';
+        return 'bg-red-50 text-red-800 border-red-200/60 line-through';
       default:
         return 'bg-neutral-50 text-neutral-700 border-neutral-200/60';
     }
@@ -59,11 +61,13 @@ export default function MyOrders({ onNavigate }: MyOrdersProps) {
       case 'pending':
         return <Clock className="w-4 h-4 text-amber-600 animate-pulse" />;
       case 'confirmed':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
+        return <CheckCircle2 className="w-4 h-4 text-indigo-600" />;
+      case 'shipped':
+        return <Truck className="w-4 h-4 text-purple-600" />;
       case 'delivered':
-        return <Package className="w-4 h-4 text-blue-600" />;
+        return <Package className="w-4 h-4 text-emerald-600" />;
       case 'cancelled':
-        return <XCircle className="w-4 h-4 text-neutral-500" />;
+        return <XCircle className="w-4 h-4 text-red-500" />;
     }
   };
 
@@ -109,6 +113,22 @@ export default function MyOrders({ onNavigate }: MyOrdersProps) {
 
       {/* Results Section */}
       <AnimatePresence mode="wait">
+        {!hasSearched && !isLoading && (
+          <motion.div
+            key="initial-state"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="bg-white border border-border/60 py-16 px-6 text-center rounded-2xl max-w-lg mx-auto shadow-[0_1px_3px_rgba(0,0,0,0.01)] space-y-4"
+          >
+            <Package className="w-12 h-12 text-[#6B6B65]/35 mx-auto animate-pulse" />
+            <p className="font-heading text-lg font-bold text-text-primary">Track Your Thrift Finds</p>
+            <p className="text-xs text-text-secondary/85 max-w-md mx-auto leading-relaxed">
+              We personally deliver or arrange pickup for all your 1-of-1 garments. Enter your email address or phone number above to check preparation, packaging, shipment, and real-time delivery status!
+            </p>
+          </motion.div>
+        )}
+
         {isLoading && (
           <motion.div
             key="loading"

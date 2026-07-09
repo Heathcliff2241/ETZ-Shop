@@ -97,7 +97,7 @@ ordersRouter.get('/', requireAdmin, asyncHandler(async (_req: Request, res: Resp
 // ── PUT /api/orders/:id/status  (admin only) ──────────────────────────────────
 ordersRouter.put('/:id/status', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
   const { status } = req.body as { status?: string };
-  const validStatuses = ['pending', 'confirmed', 'delivered', 'cancelled'];
+  const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
 
   if (!status || !validStatuses.includes(status)) {
     return res.status(400).json({ error: 'Invalid status.' });

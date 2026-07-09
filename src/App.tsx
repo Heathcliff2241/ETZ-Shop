@@ -20,6 +20,7 @@ import Contact from './components/Contact';
 import Cart from './components/Cart';
 import Checkout from './components/Checkout';
 import OrderConfirmation from './components/OrderConfirmation';
+import MyOrders from './components/MyOrders';
 import { PrivacyPolicy, TermsOfService } from './components/LegalPages';
 
 export default function App() {
@@ -575,7 +576,7 @@ export default function App() {
       />
 
       {/* MAIN CONTENT PORT PORTION WITH TRANSITIONS */}
-      <main className="flex-grow w-full">
+      <main className={`flex-grow w-full ${currentPage !== 'home' ? 'pt-20 sm:pt-24' : ''}`}>
         <AnimatePresence mode="wait">
           {/* A. HOMEPAGE */}
           {currentPage === 'home' && (
@@ -778,6 +779,19 @@ export default function App() {
                 shopGcash={shopGcash}
                 onNavigate={handleNavigate}
               />
+            </motion.div>
+          )}
+
+          {/* MY ORDERS TRACKER */}
+          {currentPage === 'my-orders' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              key="my-orders"
+            >
+              <MyOrders onNavigate={handleNavigate} />
             </motion.div>
           )}
 

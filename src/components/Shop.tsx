@@ -277,7 +277,7 @@ export default function Shop({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-6">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
