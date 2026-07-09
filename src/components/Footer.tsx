@@ -50,6 +50,14 @@ export default function Footer({ onNavigate, shopEmail, shopPhone, shopFacebook 
               </li>
               <li>
                 <button
+                  onClick={() => onNavigate('my-orders')}
+                  className="text-white/70 hover:text-white transition-colors cursor-pointer text-left"
+                >
+                  Track my orders
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={() => onNavigate('how-it-works')}
                   className="text-white/70 hover:text-white transition-colors cursor-pointer text-left"
                 >

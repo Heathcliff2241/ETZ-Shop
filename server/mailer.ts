@@ -90,6 +90,51 @@ export async function sendOrderNotification(order: {
     </div>
   `;
 
+  let customerMessage = '';
+  let statusBadgeColor = '#d97706'; // amber for pending
+  let nextStepsHtml = '';
+
+  const cleanFirstName = order.customerName.split(' ')[0] || order.customerName;
+
+  switch (order.status) {
+    case 'confirmed':
+      statusBadgeColor = '#15803d'; // green
+      customerMessage = `Great news! Your reservation request has been officially <strong>CONFIRMED</strong> by our team. We have inspected your hand-selected 1-of-1 items under high-intensity light and packed them securely. They are now officially set aside for you and ready for handover!`;
+      nextStepsHtml = `
+        <li style="margin-bottom: 6px;"><strong>Coordinate Handover:</strong> We will contact you shortly via SMS or Messenger to align on your preferred pickup time in Loong, Tabogon, or finalize courier/shipping details if you chose delivery.</li>
+        <li style="margin-bottom: 6px;"><strong>Payment:</strong> You can complete payment via GCash or pay in Cash during the physical handover.</li>
+        <li style="margin-bottom: 6px;"><strong>Enjoy your new wear:</strong> Your pre-loved items are freshly sanitized and ready to wear!</li>
+      `;
+      break;
+    case 'delivered':
+      statusBadgeColor = '#1d4ed8'; // blue
+      customerMessage = `Your order has been officially marked as <strong>DELIVERED & COMPLETED</strong>! We hope these beautiful pieces bring you joy and a great fit. Thank you for supporting sustainable 1-of-1 fashion here in Cebu.`;
+      nextStepsHtml = `
+        <li style="margin-bottom: 6px;"><strong>Give them love:</strong> Wear them with pride! You have officially given these beautiful garments their next chapter.</li>
+        <li style="margin-bottom: 6px;"><strong>Share your look:</strong> Tag us or tell your friends about your new favorite find!</li>
+        <li style="margin-bottom: 6px;"><strong>Visit again:</strong> We regularly update our rack with curated secondhand treasures. Check back soon!</li>
+      `;
+      break;
+    case 'cancelled':
+      statusBadgeColor = '#4b5563'; // gray
+      customerMessage = `Your reservation request for this order has been <strong>CANCELLED</strong>. The items have been returned to our public rack so other customers can discover them. If you did not request this cancellation or have any questions, please reply to this email or reach out to us.`;
+      nextStepsHtml = `
+        <li style="margin-bottom: 6px;"><strong>Find another fit:</strong> Explore our shop again! We add new carefully-sorted items weekly.</li>
+        <li style="margin-bottom: 6px;"><strong>Need help?</strong> If this cancellation was an accident, contact us and we'll do our best to help you find similar items or see if the original piece is still available.</li>
+      `;
+      break;
+    case 'pending':
+    default:
+      statusBadgeColor = '#d97706'; // amber
+      customerMessage = `Thank you for choosing to give these garments another chapter! We have received your order request and have temporarily reserved these 1-of-1 items for you. Since everything on our rack is strictly unique, our team will inspect the pieces one final time and confirm your order shortly.`;
+      nextStepsHtml = `
+        <li style="margin-bottom: 6px;"><strong>Final Quality Check:</strong> We inspect every item under high-intensity light to verify its exact condition.</li>
+        <li style="margin-bottom: 6px;"><strong>Order Confirmation:</strong> Once checked, we will approve the order and notify you via email and SMS.</li>
+        <li style="margin-bottom: 6px;"><strong>Arrange Handover:</strong> We will reach out to organize your local pickup in Loong, Tabogon, or arrange direct courier shipping across Cebu.</li>
+      `;
+      break;
+  }
+
   const customerHtml = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background: #FAF9F5; border: 1px solid #e8e6df; color: #1c1c1a;">
       <div style="border-bottom: 1px solid #e8e6df; padding-bottom: 24px; margin-bottom: 24px;">
@@ -98,11 +143,11 @@ export async function sendOrderNotification(order: {
       </div>
       
       <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6; font-weight: 400; color: #1c1c1a;">
-        Hi ${order.customerName.split(' ')[0] || order.customerName},
+        Hi ${cleanFirstName},
       </p>
       
       <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #4a4a45; font-weight: 300;">
-        Thank you for choosing to give these garments another chapter. We have received your order request and have reserved the 1-of-1 items for you. Since everything on our rack is strictly unique, we will contact you directly via SMS or Messenger shortly to finalize your handover details.
+        ${customerMessage}
       </p>
 
       <div style="background: #ffffff; border: 1px solid #e8e6df; padding: 28px; margin: 28px 0; font-size: 13px; line-height: 1.6;">
@@ -114,11 +159,11 @@ export async function sendOrderNotification(order: {
             <td style="padding: 6px 0; font-weight: 600; font-family: monospace; font-size: 14px;">${order.id}</td>
           </tr>
           <tr>
-            <td style="padding: 6px 0; color: #8c8c80;">Reservation Status:</td>
-            <td style="padding: 6px 0; font-weight: 600;"><span style="background: #2D6A4F; color: #ffffff; padding: 2px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; font-family: monospace;">${order.status.toUpperCase()}</span></td>
+            <td style="padding: 6px 0; color: #8c8c80;">Order Status:</td>
+            <td style="padding: 6px 0; font-weight: 600;"><span style="background: ${statusBadgeColor}; color: #ffffff; padding: 2px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; font-family: monospace; border-radius: 3px;">${order.status.toUpperCase()}</span></td>
           </tr>
           <tr>
-            <td style="padding: 6px 0; color: #8c8c80; vertical-align: top;">Reserved Garments:</td>
+            <td style="padding: 6px 0; color: #8c8c80; vertical-align: top;">Garments:</td>
             <td style="padding: 6px 0; font-weight: 500; color: #1c1c1a;">${itemSummary || 'No items listed'}</td>
           </tr>
           <tr style="border-top: 1px solid #f2f0ea;">
@@ -130,12 +175,10 @@ export async function sendOrderNotification(order: {
 
       <div style="border-top: 1px solid #e8e6df; padding-top: 24px; margin-top: 32px; font-size: 12px; color: #8c8c80; line-height: 1.6; font-weight: 300;">
         <p style="margin: 0 0 8px;"><strong>What happens next?</strong></p>
-        <ol style="margin: 0; padding-left: 16px;">
-          <li style="margin-bottom: 4px;">We will inspect the garments on the rack one final time.</li>
-          <li style="margin-bottom: 4px;">We'll reach out to your registered contact number to arrange local pickup in Loong, Tabogon or direct shipping across Cebu.</li>
-          <li style="margin-bottom: 4px;">Once handover details are confirmed, we accept secure payment via GCash or Cash.</li>
+        <ol style="margin: 0; padding-left: 16px; color: #4a4a45;">
+          ${nextStepsHtml}
         </ol>
-        <p style="margin: 16px 0 0; font-size: 11px; italic; color: #b5b5ad;">ETZ — Hand-checked, beautifully sorted vintage & secondhand garments from Tabogon, Cebu, PH.</p>
+        <p style="margin: 16px 0 0; font-size: 11px; font-style: italic; color: #b5b5ad;">ETZ — Hand-checked, beautifully sorted vintage & secondhand garments from Tabogon, Cebu, PH.</p>
       </div>
     </div>
   `;

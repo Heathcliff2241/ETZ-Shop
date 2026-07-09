@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'motion/react';
-import { ShoppingBag, Menu, X, Lock, Heart } from 'lucide-react';
+import { ShoppingBag, Menu, X, Lock, Heart, Package } from 'lucide-react';
 import { Category } from '../types';
 
 interface HeaderProps {
@@ -27,9 +27,9 @@ export default function Header({ currentPage, cartCount, wishlistCount, onNaviga
   const showSolid = isScrolled || !hasTransparentHero;
 
   const navItems = [
-    { label: 'Shop', page: 'shop', category: 'all' as const },
-    { label: 'About', page: 'about' },
-    { label: 'Contact', page: 'contact' },
+    { label: 'Shop', page: 'shop', category: 'all' as Category | 'all' | undefined },
+    { label: 'About', page: 'about', category: undefined },
+    { label: 'Contact', page: 'contact', category: undefined },
   ];
 
   const handleNavClick = (page: string, category?: Category | 'all') => {
@@ -98,6 +98,28 @@ export default function Header({ currentPage, cartCount, wishlistCount, onNaviga
 
           {/* Right actions */}
           <div className="flex items-center gap-1 pr-1">
+
+            <button
+              onClick={() => handleNavClick('my-orders')}
+              className={`relative p-2 rounded-full transition-all duration-300 cursor-pointer ${currentPage === 'my-orders'
+                ? 'bg-accent-light'
+                : showSolid
+                  ? 'hover:bg-surface-tint'
+                  : 'hover:bg-white/10'
+                }`}
+              aria-label="Track My Orders"
+              title="Track My Orders"
+              id="header-my-orders-button"
+            >
+              <Package
+                className={`w-[18px] h-[18px] transition-colors duration-300 ${currentPage === 'my-orders'
+                  ? 'text-accent'
+                  : showSolid
+                    ? 'text-text-primary'
+                    : 'text-white'
+                  }`}
+              />
+            </button>
 
             <button
               onClick={() => handleNavClick('wishlist')}
@@ -205,6 +227,14 @@ export default function Header({ currentPage, cartCount, wishlistCount, onNaviga
                   className="text-base font-medium text-text-secondary hover:text-accent transition-colors py-1 cursor-pointer"
                 >
                   How it works
+                </button>
+                <button
+                  onClick={() => handleNavClick('my-orders')}
+                  className="text-base font-medium text-text-secondary hover:text-accent transition-colors py-1 flex items-center gap-2 cursor-pointer"
+                  id="mobile-nav-my-orders"
+                >
+                  <Package className="w-4 h-4 text-accent" />
+                  Track My Orders
                 </button>
                 <button
                   onClick={() => handleNavClick('wishlist')}

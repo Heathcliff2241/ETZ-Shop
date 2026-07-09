@@ -69,10 +69,10 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 p-6 sm:p-8">
 
         {/* Left: Image Gallery */}
-        <div className="lg:col-span-7 flex flex-col gap-3">
+        <div className="lg:col-span-6 flex flex-col gap-3">
           {/* Main Image */}
           <div 
-            className="relative aspect-[4/5] bg-[#EBE9E3] rounded-xl overflow-hidden shrink-0 cursor-zoom-in"
+            className="relative aspect-[4/5] lg:max-h-[560px] bg-[#EBE9E3] rounded-xl overflow-hidden shrink-0 cursor-zoom-in flex items-center justify-center"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           >
@@ -99,7 +99,7 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
                 <button
                   key={idx}
                   onClick={() => setActiveImageIndex(idx)}
-                  className={`relative w-20 h-20 rounded-lg overflow-hidden shrink-0 cursor-pointer transition-all duration-300 ${
+                  className={`relative w-16 h-16 rounded-lg overflow-hidden shrink-0 cursor-pointer transition-all duration-300 ${
                     idx === activeImageIndex
                       ? 'ring-2 ring-[#2D6A4F] ring-offset-2 opacity-100'
                       : 'opacity-60 hover:opacity-100'
@@ -117,15 +117,15 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
             </div>
           )}
 
-          <p className="text-[11px] text-[#6B6B65] flex items-center gap-1.5">
+          <p className="text-[11px] text-[#6B6B65] flex items-center gap-1.5 mt-1">
             <Info className="w-3.5 h-3.5 text-[#2D6A4F]" />
             <span>Actual photos of this piece. What you see is what you get.</span>
           </p>
         </div>
 
         {/* Right: Product Details */}
-        <div className="lg:col-span-5 flex flex-col justify-between gap-6">
-          <div className="space-y-5">
+        <div className="lg:col-span-6 flex flex-col gap-5 lg:sticky lg:top-24 h-fit">
+          <div className="space-y-4">
 
             {/* Category + Condition */}
             <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
             </div>
 
             {/* Title */}
-            <h1 className="font-heading text-2xl sm:text-[28px] text-[#1C1C1A] leading-tight tracking-tight" id="product-detail-title">
+            <h1 className="font-heading text-2xl sm:text-[28px] lg:text-3xl text-[#1C1C1A] leading-tight tracking-tight" id="product-detail-title">
               {product.name}
             </h1>
 
@@ -150,8 +150,66 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
               <span className="text-[11px] text-[#6B6B65] font-medium">PHP</span>
             </div>
 
+            {/* Primary Action Section: Add To Cart (NOW HIGHER UP - ABOVE THE FOLD!) */}
+            <div className="pt-3 pb-4 border-y border-[#E5E3DE]/60 space-y-3">
+              <div className="flex gap-2.5">
+                {product.isSold ? (
+                  <button
+                    disabled
+                    className="flex-grow bg-[#EBE9E3] text-[#6B6B65] font-semibold py-3.5 px-6 rounded-xl cursor-not-allowed text-center uppercase tracking-wider text-[13px]"
+                  >
+                    Sold out
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onAddToCart(product)}
+                    className={`flex-grow py-3.5 px-6 rounded-xl text-center font-semibold text-[14px] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98] ${
+                      isInCart
+                        ? 'bg-[#2D6A4F] text-white hover:bg-[#245840]'
+                        : 'bg-[#1C1C1A] text-white hover:bg-[#1C1C1A]/90'
+                    }`}
+                    style={{ transition: 'all 0.35s cubic-bezier(0.32, 0.72, 0, 1)' }}
+                    id="add-to-cart-button"
+                  >
+                    {isInCart ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Added to cart</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="w-4 h-4" />
+                        <span>Add to cart</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <button
+                  onClick={onToggleSave}
+                  className={`px-4 py-3.5 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-300 active:scale-[0.98] ${
+                    isSaved
+                      ? 'bg-[#2D6A4F]/10 text-[#2D6A4F]'
+                      : 'bg-[#F7F6F3] text-[#6B6B65] hover:text-[#2D6A4F] hover:bg-[#2D6A4F]/5'
+                  }`}
+                  title={isSaved ? "Remove from saved" : "Save for later"}
+                  id="detail-wishlist-toggle-button"
+                >
+                  <Heart className={`w-5 h-5 ${isSaved ? 'fill-[#2D6A4F]' : ''}`} />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 text-[11px] text-[#6B6B65] justify-start px-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>Single 1-of-1 piece • Available for immediate pick-up or Cebu delivery.</span>
+              </div>
+            </div>
+
             {/* Description */}
-            <p className="text-[14px] leading-relaxed text-[#6B6B65] border-l-2 border-[#2D6A4F]/20 pl-4">
+            <p className="text-[14px] leading-relaxed text-[#6B6B65] border-l-2 border-[#2D6A4F]/20 pl-4 py-1">
               {product.description}
             </p>
 
@@ -183,58 +241,8 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
             </div>
           </div>
 
-          {/* Add To Cart */}
-          <div className="pt-5 border-t border-[#E5E3DE] space-y-3">
-            <div className="flex gap-2.5">
-              {product.isSold ? (
-                <button
-                  disabled
-                  className="flex-grow bg-[#EBE9E3] text-[#6B6B65] font-semibold py-3.5 px-6 rounded-xl cursor-not-allowed text-center uppercase tracking-wider text-[13px]"
-                >
-                  Sold out
-                </button>
-              ) : (
-                <button
-                  onClick={() => onAddToCart(product)}
-                  className={`flex-grow py-3.5 px-6 rounded-xl text-center font-semibold text-[14px] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98] ${
-                    isInCart
-                      ? 'bg-[#2D6A4F] text-white hover:bg-[#245840]'
-                      : 'bg-[#1C1C1A] text-white hover:bg-[#1C1C1A]/90'
-                  }`}
-                  style={{ transition: 'all 0.35s cubic-bezier(0.32, 0.72, 0, 1)' }}
-                  id="add-to-cart-button"
-                >
-                  {isInCart ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Added to cart</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag className="w-4 h-4" />
-                      <span>Add to cart</span>
-                    </>
-                  )}
-                </button>
-              )}
-
-              <button
-                onClick={onToggleSave}
-                className={`px-4 py-3.5 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-300 active:scale-[0.98] ${
-                  isSaved
-                    ? 'bg-[#2D6A4F]/10 text-[#2D6A4F]'
-                    : 'bg-[#F7F6F3] text-[#6B6B65] hover:text-[#2D6A4F] hover:bg-[#2D6A4F]/5'
-                }`}
-                title={isSaved ? "Remove from saved" : "Save for later"}
-                id="detail-wishlist-toggle-button"
-              >
-                <Heart className={`w-5 h-5 ${isSaved ? 'fill-[#2D6A4F]' : ''}`} />
-              </button>
-            </div>
-
-            <p className="text-center text-[11px] text-[#6B6B65]">
-              Payment via GCash or cash on delivery/pickup. No card details required.
-            </p>
+          <div className="pt-3 border-t border-[#E5E3DE]/50 text-center text-[11px] text-[#6B6B65]">
+            Payment via GCash or cash on delivery/pickup. No card details required.
           </div>
         </div>
       </div>

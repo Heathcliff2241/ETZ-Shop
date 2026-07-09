@@ -23,6 +23,25 @@ function toOrder(row: Record<string, unknown>) {
   };
 }
 
+// ── GET /api/orders/lookup (public — customer order tracking) ──────────────────────────
+ordersRouter.get('/lookup', asyncHandler(async (req: Request, res: Response) => {
+  const query = req.query.query ? String(req.query.query).trim() : '';
+  if (!query) {
+    return res.status(400).json({ error: 'Please enter an email or phone number to look up your orders.' });
+  }
+
+  // Find orders matching either customer_email or customer_phone
+  const rows = await sql`
+    SELECT * FROM etz_orders 
+    WHERE LOWER(customer_email) = LOWER(${query}) 
+       OR customer_phone = ${query}
+       OR REPLACE(customer_phone, ' ', '') = REPLACE(${query}, ' ', '')
+    ORDER BY date_created DESC
+  ` as Array<Record<string, unknown>>;
+
+  return res.json(rows.map(toOrder));
+}));
+
 // ── POST /api/orders  (public — place order) ─────────────────────────────────
 ordersRouter.post('/', asyncHandler(async (req: Request, res: Response) => {
   const o = req.body as Record<string, unknown>;
