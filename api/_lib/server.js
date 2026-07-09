@@ -19,7 +19,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
 }));
-app.use(express.json());
+app.use(express.json({ limit: '16mb' }));
 
 app.options('*', (_req, res) => {
   res.header('Access-Control-Allow-Origin', '*');
