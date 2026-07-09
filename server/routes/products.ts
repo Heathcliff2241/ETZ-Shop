@@ -134,11 +134,15 @@ productsRouter.post('/upload', requireAdmin, asyncHandler(async (req: Request, r
     return res.json({ url: blob.url });
   }
 
-  const filePath = path.join(uploadDir, uniqueName);
-  await fs.mkdir(uploadDir, { recursive: true });
-  await fs.writeFile(filePath, fileBuffer);
-
-  return res.json({ url: `/images/uploads/${uniqueName}` });
+  try {
+    const filePath = path.join(uploadDir, uniqueName);
+    await fs.mkdir(uploadDir, { recursive: true });
+    await fs.writeFile(filePath, fileBuffer);
+    return res.json({ url: `/images/uploads/${uniqueName}` });
+  } catch (err) {
+    console.warn('[upload] Local disk is read-only or inaccessible (e.g. Vercel Serverless), falling back to returning base64 data URI directly.', err);
+    return res.json({ url: data });
+  }
 }));
 
 // ── GET /api/products  (public) ───────────────────────────────────────────────
