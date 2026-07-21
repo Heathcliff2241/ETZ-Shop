@@ -19,7 +19,7 @@ function maskEmail(value: string) {
 
 export default function AdminPage() {
   const [authState, setAuthState] = useState<AuthState>('idle');
-  const [email] = useState(ADMIN_EMAIL);
+  const [email, setEmail] = useState(() => localStorage.getItem('etz_admin_email_input') || '');
   const [code, setCode] = useState('');
   const [otpToken, setOtpToken] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -48,13 +48,18 @@ export default function AdminPage() {
   };
 
   const handleRequestOtp = async () => {
+    if (!email) {
+      setError('Please enter your email address.');
+      return;
+    }
     setError(null);
     setAuthState('sending');
     try {
+      localStorage.setItem('etz_admin_email_input', email.trim());
       const res = await fetch('/api/admin/request-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       });
       const data = await parseJsonSafely(res);
       if (!res.ok) throw new Error(data?.error || 'Failed to send OTP.');
@@ -78,7 +83,7 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, otpToken }),
+        body: JSON.stringify({ email: email.trim(), code, otpToken }),
       });
       const data = await parseJsonSafely(res);
       if (!res.ok) throw new Error(data?.error || 'Invalid code.');
@@ -122,7 +127,7 @@ export default function AdminPage() {
             <Lock className="w-6 h-6 text-white" />
           </div>
           <h1 className="font-heading text-2xl font-bold text-[#1C1C1A]">Admin Access</h1>
-          <p className="text-sm text-[#6B6B65] mt-1">ETZ A Shoppe · Owner Panel</p>
+          <p className="text-sm text-[#6B6B65] mt-1">ETZ · Owner Panel</p>
         </div>
 
         {/* Card */}
@@ -150,10 +155,14 @@ export default function AdminPage() {
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9B9B93]" />
-              <div className="w-full pl-9 pr-4 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] flex items-center justify-between gap-2">
-                <span className="truncate font-mono">{maskEmail(email)}</span>
-                <span className="text-[11px] uppercase tracking-wide text-[#6B6B65]">Verified owner</span>
-              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={authState === 'awaiting_code' || isLoading}
+                className="w-full pl-9 pr-4 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] placeholder-[#9B9B93] focus:outline-none focus:border-[#2D6A4F] focus:ring-1 focus:ring-[#2D6A4F] transition-colors disabled:opacity-60"
+                placeholder="you@domain.com"
+              />
             </div>
           </div>
 

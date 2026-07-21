@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Edit2, Trash2, CheckCircle, XCircle, Package,
   ShoppingCart, Save, RefreshCw, LogOut, Loader2, AlertCircle,
-  ChevronDown
+  ChevronDown, Settings
 } from 'lucide-react';
 import { Product, Order, Category, ConditionGrade } from '../types';
 
@@ -49,8 +49,104 @@ const STATUS_COLORS: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'settings'>('products');
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  // Dynamic admin credentials state
+  const [adminEmail, setAdminEmail] = useState('');
+  const [notificationEmail, setNotificationEmail] = useState('');
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  // Shop contact credentials state
+  const [localShopEmail, setLocalShopEmail] = useState('cesaresmero2@gmail.com');
+  const [localShopPhone, setLocalShopPhone] = useState('+63 912 345 6789');
+  const [localShopFacebook, setLocalShopFacebook] = useState('https://www.facebook.com/profile.php?id=100064749982511');
+  const [localShopGcash, setLocalShopGcash] = useState('0912 345 6789');
+
+  const fetchAdminSettings = useCallback(async () => {
+    if (!token) return;
+    setSettingsLoading(true);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        headers: authHeaders(token),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminEmail(data.adminEmail || '');
+        setNotificationEmail(data.notificationEmail || '');
+      }
+    } catch (err) {
+      console.error('[settings] Failed to fetch settings:', err);
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, [token]);
+
+  // Load public settings from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('etz_settings');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setLocalShopEmail(parsed.email || 'cesaresmero2@gmail.com');
+        setLocalShopPhone(parsed.phone || '+63 912 345 6789');
+        setLocalShopFacebook(parsed.facebook || 'https://www.facebook.com/profile.php?id=100064749982511');
+        setLocalShopGcash(parsed.gcash || '0912 345 6789');
+      } catch (e) {
+        console.error('Failed to parse etz_settings', e);
+      }
+    }
+  }, []);
+
+  // Fetch secure settings when 'settings' tab is activated
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      fetchAdminSettings();
+    }
+  }, [activeTab, fetchAdminSettings]);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminEmail.trim() || !notificationEmail.trim()) {
+      showToast('Both Admin Login Email and Order Notification Email are required.', 'error');
+      return;
+    }
+
+    setSettingsSaving(true);
+    try {
+      if (token) {
+        const res = await fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: authHeaders(token),
+          body: JSON.stringify({
+            adminEmail: adminEmail.trim(),
+            notificationEmail: notificationEmail.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || 'Failed to update admin credentials on server.');
+        }
+      }
+
+      // Save public credentials to localStorage and dispatch event for real-time reactivity
+      const shopSettings = {
+        email: localShopEmail.trim(),
+        phone: localShopPhone.trim(),
+        facebook: localShopFacebook.trim(),
+        gcash: localShopGcash.trim(),
+      };
+      localStorage.setItem('etz_settings', JSON.stringify(shopSettings));
+      window.dispatchEvent(new Event('storage'));
+
+      showToast('All settings saved successfully!', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save settings.', 'error');
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
 
   // Products state
   const [products, setProducts] = useState<Product[]>([]);
@@ -304,7 +400,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
       {/* Topbar */}
       <div className="bg-white border-b border-[#E5E3DE] px-6 py-4 flex items-center justify-between sticky top-0 z-40">
         <div>
-          <h1 className="font-heading text-xl font-bold text-[#1C1C1A]">ETZ A Shoppe</h1>
+          <h1 className="font-heading text-xl font-bold text-[#1C1C1A]">ETZ</h1>
           <p className="text-xs text-[#6B6B65]">Owner Panel</p>
         </div>
         <button
@@ -334,8 +430,8 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-[#E5E3DE] mb-8">
-          {(['products', 'orders'] as const).map(tab => (
+        <div className="flex gap-1 border-b border-[#E5E3DE] mb-8 overflow-x-auto">
+          {(['products', 'orders', 'settings'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); resetForm(); }}
@@ -346,8 +442,8 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
               }`}
               id={`admin-tab-${tab}`}
             >
-              {tab === 'products' ? <Package className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
-              {tab === 'products' ? `Products (${products.length})` : `Orders (${orders.length})`}
+              {tab === 'products' ? <Package className="w-4 h-4" /> : tab === 'orders' ? <ShoppingCart className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
+              {tab === 'products' ? `Products (${products.length})` : tab === 'orders' ? `Orders (${orders.length})` : 'Admin Settings'}
             </button>
           ))}
         </div>
@@ -625,6 +721,125 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <div className="bg-white border border-[#E5E3DE] rounded-2xl p-6">
+              <div className="border-b border-[#F0EEE8] pb-4 mb-6">
+                <h2 className="font-heading text-lg font-bold text-[#1C1C1A]">Owner Settings</h2>
+                <p className="text-xs text-[#6B6B65] mt-1">Configure who can log in, who receives notifications, and public store details.</p>
+              </div>
+
+              {settingsLoading ? (
+                <div className="flex items-center justify-center py-12 text-[#6B6B65]">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading configurations...
+                </div>
+              ) : (
+                <form onSubmit={handleSaveSettings} className="space-y-6">
+                  {/* Section A: Security & Access */}
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#9B9B93]">Security & Access Credentials</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">
+                          Authorized Admin Login Email *
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={adminEmail}
+                          onChange={e => setAdminEmail(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="e.g. owner@domain.com"
+                        />
+                        <p className="text-[11px] text-[#6B6B65]">This email is authorized to receive OTP logins to access this panel.</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">
+                          Order Notification Recipient Email *
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={notificationEmail}
+                          onChange={e => setNotificationEmail(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="e.g. notifications@domain.com"
+                        />
+                        <p className="text-[11px] text-[#6B6B65]">This email receives GCash/Cash order notifications and status updates.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section B: Public Store Contact Info */}
+                  <div className="space-y-4 pt-4 border-t border-[#F0EEE8]">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#9B9B93]">Public Shop Information</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">Public Contact Email</label>
+                        <input
+                          type="email"
+                          value={localShopEmail}
+                          onChange={e => setLocalShopEmail(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="cesaresmero2@gmail.com"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">Public Phone Number</label>
+                        <input
+                          type="text"
+                          value={localShopPhone}
+                          onChange={e => setLocalShopPhone(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="+63 912 345 6789"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">Public Facebook Page URL</label>
+                        <input
+                          type="url"
+                          value={localShopFacebook}
+                          onChange={e => setLocalShopFacebook(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="https://www.facebook.com/..."
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">GCash Number for Checkout</label>
+                        <input
+                          type="text"
+                          value={localShopGcash}
+                          onChange={e => setLocalShopGcash(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="0912 345 6789"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-[#F0EEE8]">
+                    <button
+                      type="submit"
+                      disabled={settingsSaving}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#2D6A4F] hover:bg-[#245840] text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer border-none disabled:opacity-60"
+                    >
+                      {settingsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Save Settings
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         )}
       </div>

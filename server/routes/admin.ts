@@ -3,12 +3,12 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { sql } from '../db.js';
 import { sendOtp } from '../mailer.js';
+import { adminConfig } from '../adminConfig.js';
 
 dotenv.config();
 
 export const adminRouter = Router();
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'changeme';
 const OTP_EXPIRY_MINUTES = 10;
 const otpSessions = new Map<string, { code: string; expiresAt: Date }>();
@@ -16,8 +16,9 @@ const otpSessions = new Map<string, { code: string; expiresAt: Date }>();
 // ── Request OTP ──────────────────────────────────────────────────────────────
 adminRouter.post('/request-otp', async (req: Request, res: Response) => {
   const { email } = req.body as { email?: string };
+  const allowedAdminEmail = adminConfig.getAdminEmail();
 
-  if (!email || email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+  if (!email || email.toLowerCase() !== allowedAdminEmail.toLowerCase()) {
     return res.status(403).json({ error: 'Not authorized.' });
   }
 
@@ -75,6 +76,31 @@ adminRouter.post('/verify-otp', async (req: Request, res: Response) => {
   return res.json({ ok: true, token });
 });
 
+// ── Get Admin Settings ────────────────────────────────────────────────────────
+adminRouter.get('/settings', requireAdmin, (req: Request, res: Response) => {
+  return res.json({
+    adminEmail: adminConfig.getAdminEmail(),
+    notificationEmail: adminConfig.getNotificationEmail(),
+  });
+});
+
+// ── Update Admin Settings ─────────────────────────────────────────────────────
+adminRouter.put('/settings', requireAdmin, (req: Request, res: Response) => {
+  const { adminEmail, notificationEmail } = req.body as { adminEmail?: string; notificationEmail?: string };
+
+  if (!adminEmail || !notificationEmail) {
+    return res.status(400).json({ error: 'Both adminEmail and notificationEmail are required.' });
+  }
+
+  try {
+    adminConfig.updateConfig(adminEmail, notificationEmail);
+    return res.json({ ok: true, message: 'Settings updated successfully.' });
+  } catch (err) {
+    console.error('[admin] Failed to update settings:', err);
+    return res.status(500).json({ error: 'Failed to update settings.' });
+  }
+});
+
 function extractToken(req: Request) {
   const authHeader = req.headers.authorization;
   if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
@@ -114,3 +140,4 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Invalid or expired token.' });
   }
 }
+    

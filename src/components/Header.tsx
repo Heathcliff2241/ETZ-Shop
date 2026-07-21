@@ -244,14 +244,6 @@ export default function Header({ currentPage, cartCount, wishlistCount, onNaviga
                   <Heart className={`w-4 h-4 ${wishlistCount > 0 ? 'fill-accent text-accent' : ''}`} />
                   Wishlist ({wishlistCount})
                 </button>
-                <button
-                  onClick={() => handleNavClick('admin')}
-                  className="text-base font-medium text-accent hover:text-accent-hover transition-colors py-1 flex items-center gap-2 cursor-pointer"
-                  id="mobile-nav-admin"
-                >
-                  <Lock className="w-4 h-4" />
-                  Owner Portal
-                </button>
               </motion.div>
             </div>
           </motion.div>

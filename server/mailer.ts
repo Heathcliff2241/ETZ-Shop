@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import { adminConfig } from './adminConfig.js';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
@@ -64,7 +65,7 @@ export async function sendOrderNotification(
   const itemSummary = order.items
     .map((item) => item.productName || item.productId || 'Item')
     .join(', ');
-  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.SMTP_USER;
+  const adminEmail = adminConfig.getNotificationEmail();
   const subject = `Order ${order.id} Status Update: ${order.status.toUpperCase()}`;
   
   // Construct absolute admin portal link using APP_URL if defined
