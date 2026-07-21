@@ -788,7 +788,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
                           value={localShopEmail}
                           onChange={e => setLocalShopEmail(e.target.value)}
                           className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
-                          placeholder="cesaresmero2@gmail.com"
+                          placeholder="shop@example.com"
                         />
                       </div>
 

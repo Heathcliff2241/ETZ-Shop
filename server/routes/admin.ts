@@ -91,14 +91,23 @@ adminRouter.get('/settings', requireAdmin, (req: Request, res: Response) => {
 
 // ── Update Admin Settings ─────────────────────────────────────────────────────
 adminRouter.put('/settings', requireAdmin, (req: Request, res: Response) => {
-  const { adminEmail, notificationEmail } = req.body as { adminEmail?: string; notificationEmail?: string };
+  const {
+    adminEmail,
+    notificationEmail,
+  } = req.body as {
+    adminEmail?: string;
+    notificationEmail?: string;
+  };
 
   if (!adminEmail || !notificationEmail) {
     return res.status(400).json({ error: 'Both adminEmail and notificationEmail are required.' });
   }
 
   try {
-    adminConfig.updateConfig(adminEmail, notificationEmail);
+    adminConfig.updateConfig(
+      adminEmail,
+      notificationEmail
+    );
     return res.json({ ok: true, message: 'Settings updated successfully.' });
   } catch (err) {
     console.error('[admin] Failed to update settings:', err);
@@ -145,3 +154,4 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Invalid or expired token.' });
   }
 }
+  

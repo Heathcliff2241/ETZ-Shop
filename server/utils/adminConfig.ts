@@ -11,8 +11,8 @@ interface AdminConfig {
   notificationEmail: string;
 }
 
-const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'cesaresmero2@gmail.com';
-const DEFAULT_NOTIFICATION_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'cesaresmero2@gmail.com';
+const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
+const DEFAULT_NOTIFICATION_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@example.com';
 
 function loadConfig(): AdminConfig {
   try {

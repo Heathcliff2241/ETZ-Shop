@@ -215,11 +215,15 @@ export default function App() {
     // Settings
     const storedSettings = localStorage.getItem('etz_settings');
     if (storedSettings) {
-      const parsed = JSON.parse(storedSettings);
-      setShopEmail(parsed.email || 'cesaresmero2@gmail.com');
-      setShopPhone(parsed.phone || '+63 912 345 6789');
-      setShopFacebook(parsed.facebook || 'https://www.facebook.com/profile.php?id=100064749982511');
-      setShopGcash(parsed.gcash || '0912 345 6789');
+      try {
+        const parsed = JSON.parse(storedSettings);
+        setShopEmail(parsed.email || 'cesaresmero2@gmail.com');
+        setShopPhone(parsed.phone || '+63 912 345 6789');
+        setShopFacebook(parsed.facebook || 'https://www.facebook.com/profile.php?id=100064749982511');
+        setShopGcash(parsed.gcash || '0912 345 6789');
+      } catch (e) {
+        console.error('Failed to parse settings from localStorage', e);
+      }
     }
 
     // Secret Admin query param route
@@ -228,6 +232,24 @@ export default function App() {
       setCurrentPage('admin');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+
+    const handleStorageChange = () => {
+      const stored = localStorage.getItem('etz_settings');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setShopEmail(parsed.email || 'cesaresmero2@gmail.com');
+          setShopPhone(parsed.phone || '+63 912 345 6789');
+          setShopFacebook(parsed.facebook || 'https://www.facebook.com/profile.php?id=100064749982511');
+          setShopGcash(parsed.gcash || '0912 345 6789');
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   useEffect(() => {
