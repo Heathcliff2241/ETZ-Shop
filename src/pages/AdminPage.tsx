@@ -20,10 +20,32 @@ function maskEmail(value: string) {
 export default function AdminPage() {
   const [authState, setAuthState] = useState<AuthState>('idle');
   const [email, setEmail] = useState(() => localStorage.getItem('etz_admin_email_input') || '');
+  const [configuredEmail, setConfiguredEmail] = useState('');
   const [code, setCode] = useState('');
   const [otpToken, setOtpToken] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Load configured admin email hint on mount
+  useEffect(() => {
+    fetch('/api/admin/login-hint')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch login hint');
+        return res.json();
+      })
+      .then((data) => {
+        if (data?.email) {
+          setConfiguredEmail(data.email.trim());
+          // Pre-fill state if there is no user-typed state in localStorage
+          if (!localStorage.getItem('etz_admin_email_input')) {
+            setEmail(data.email.trim());
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('[hint] Could not fetch admin login hint:', err);
+      });
+  }, []);
 
   // Persist token in sessionStorage so refreshes don't require re-login
   useEffect(() => {
@@ -150,9 +172,16 @@ export default function AdminPage() {
 
           {/* Step 1 — Email */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-[#1C1C1A] tracking-wide uppercase">
-              Admin Email
-            </label>
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-semibold text-[#1C1C1A] tracking-wide uppercase">
+                Admin Email
+              </label>
+              {email.trim().toLowerCase() === configuredEmail.toLowerCase() && configuredEmail !== '' && (
+                <span className="text-[11px] font-semibold text-[#2D6A4F] uppercase tracking-wider animate-pulse">
+                  Verified Owner Email
+                </span>
+              )}
+            </div>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9B9B93]" />
               <input
@@ -160,7 +189,11 @@ export default function AdminPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={authState === 'awaiting_code' || isLoading}
-                className="w-full pl-9 pr-4 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] placeholder-[#9B9B93] focus:outline-none focus:border-[#2D6A4F] focus:ring-1 focus:ring-[#2D6A4F] transition-colors disabled:opacity-60"
+                className={`w-full pl-9 pr-4 py-2.5 text-sm bg-[#F7F6F2] border rounded-xl text-[#1C1C1A] placeholder-[#9B9B93] focus:outline-none focus:ring-1 transition-colors disabled:opacity-60 ${
+                  email.trim().toLowerCase() === configuredEmail.toLowerCase() && configuredEmail !== ''
+                    ? 'border-[#2D6A4F] focus:border-[#2D6A4F] focus:ring-[#2D6A4F]'
+                    : 'border-[#E5E3DE] focus:border-[#2D6A4F] focus:ring-[#2D6A4F]'
+                }`}
                 placeholder="you@domain.com"
               />
             </div>

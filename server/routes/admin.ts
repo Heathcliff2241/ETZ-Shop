@@ -13,6 +13,11 @@ const SESSION_SECRET = process.env.SESSION_SECRET || 'changeme';
 const OTP_EXPIRY_MINUTES = 10;
 const otpSessions = new Map<string, { code: string; expiresAt: Date }>();
 
+// ── Get Public Login Hint ────────────────────────────────────────────────────
+adminRouter.get('/login-hint', (req: Request, res: Response) => {
+  return res.json({ email: adminConfig.getAdminEmail() });
+});
+
 // ── Request OTP ──────────────────────────────────────────────────────────────
 adminRouter.post('/request-otp', async (req: Request, res: Response) => {
   const { email } = req.body as { email?: string };
@@ -140,4 +145,3 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Invalid or expired token.' });
   }
 }
-    
