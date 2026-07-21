@@ -11,7 +11,6 @@ export const adminRouter = Router();
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'changeme';
 const OTP_EXPIRY_MINUTES = 10;
-const otpSessions = new Map<string, { code: string; expiresAt: Date }>();
 
 // ── Get Public Login Hint ────────────────────────────────────────────────────
 adminRouter.get('/login-hint', (req: Request, res: Response) => {
@@ -30,7 +29,16 @@ adminRouter.post('/request-otp', async (req: Request, res: Response) => {
   const normalizedEmail = email.toLowerCase();
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-  otpSessions.set(normalizedEmail, { code, expiresAt });
+
+  try {
+    await sql`DELETE FROM etz_otp_sessions WHERE email = ${normalizedEmail}`;
+    await sql`
+      INSERT INTO etz_otp_sessions (email, code, expires_at)
+      VALUES (${normalizedEmail}, ${code}, ${expiresAt.toISOString()})
+    `;
+  } catch (dbErr) {
+    console.error('[otp] Failed to write OTP to database:', dbErr);
+  }
 
   try {
     await sendOtp(normalizedEmail, code);
@@ -57,14 +65,30 @@ adminRouter.post('/verify-otp', async (req: Request, res: Response) => {
   }
 
   const normalizedEmail = email.toLowerCase();
-  const session = otpSessions.get(normalizedEmail);
+  let session: { email: string; code: string; expires_at: string | Date } | null = null;
+
+  try {
+    const rows = await sql`
+      SELECT email, code, expires_at 
+      FROM etz_otp_sessions 
+      WHERE email = ${normalizedEmail}
+    `;
+    if (rows && rows.length > 0) {
+      session = rows[0] as any;
+    }
+  } catch (dbErr) {
+    console.error('[otp] Failed to read OTP from database:', dbErr);
+  }
 
   if (!session) {
     return res.status(401).json({ error: 'No OTP requested for this email.' });
   }
 
-  if (new Date() > session.expiresAt) {
-    otpSessions.delete(normalizedEmail);
+  const expiresAt = typeof session.expires_at === 'string' ? new Date(session.expires_at) : session.expires_at;
+  if (new Date() > expiresAt) {
+    try {
+      await sql`DELETE FROM etz_otp_sessions WHERE email = ${normalizedEmail}`;
+    } catch {}
     return res.status(401).json({ error: 'OTP has expired. Please request a new one.' });
   }
 
@@ -72,7 +96,9 @@ adminRouter.post('/verify-otp', async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Invalid OTP code.' });
   }
 
-  otpSessions.delete(normalizedEmail);
+  try {
+    await sql`DELETE FROM etz_otp_sessions WHERE email = ${normalizedEmail}`;
+  } catch {}
 
   const token = jwt.sign({ email: normalizedEmail, role: 'admin' }, SESSION_SECRET, {
     expiresIn: '30m',
@@ -154,4 +180,3 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Invalid or expired token.' });
   }
 }
-  
