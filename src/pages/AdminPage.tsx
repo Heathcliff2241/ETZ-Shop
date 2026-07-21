@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Mail, KeyRound, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, Mail, KeyRound, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import AdminPanel from '../components/AdminPanel';
 
 type AuthState = 'idle' | 'sending' | 'awaiting_code' | 'verifying' | 'authenticated';
@@ -25,6 +25,21 @@ export default function AdminPage() {
   const [otpToken, setOtpToken] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+  };
+
+  // Automatically dismiss toast after 4 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Load configured admin email hint on mount
   useEffect(() => {
@@ -72,6 +87,7 @@ export default function AdminPage() {
   const handleRequestOtp = async () => {
     if (!email) {
       setError('Please enter your email address.');
+      showToast('Please enter your email address.', 'error');
       return;
     }
     setError(null);
@@ -92,8 +108,13 @@ export default function AdminPage() {
       }
       setCode('');
       setAuthState('awaiting_code');
+      showToast('OTP code sent successfully!', 'success');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      setError(errMsg);
+      showToast(errMsg, 'error');
+      setEmail('');
+      localStorage.removeItem('etz_admin_email_input');
       setAuthState('idle');
     }
   };
@@ -113,8 +134,12 @@ export default function AdminPage() {
       localStorage.setItem('etz_admin_token', data.token);
       setToken(data.token);
       setAuthState('authenticated');
+      showToast('Logged in successfully!', 'success');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      setError(errMsg);
+      showToast(errMsg, 'error');
+      setCode('');
       setAuthState('awaiting_code');
     }
   };
@@ -270,6 +295,23 @@ export default function AdminPage() {
           This page is only accessible via direct URL.
         </p>
       </motion.div>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className={`fixed bottom-6 right-6 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm z-50 ${
+              toast.type === 'success' ? 'bg-white border-[#2D6A4F]/20 text-[#1C1C1A]' : 'bg-white border-red-200 text-red-700'
+            }`}
+          >
+            {toast.type === 'success' ? <CheckCircle className="w-4 h-4 text-[#2D6A4F]" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
+            <span className="font-medium">{toast.msg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
