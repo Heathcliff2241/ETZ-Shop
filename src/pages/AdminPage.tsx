@@ -21,7 +21,7 @@ function maskEmail(value: string) {
 
 export default function AdminPage() {
   const [authState, setAuthState] = useState<AuthState>('idle');
-  const [email, setEmail] = useState(() => localStorage.getItem('etz_admin_email_input') || '');
+  const [email, setEmail] = useState('');
   const [configuredEmail, setConfiguredEmail] = useState('');
   const [code, setCode] = useState('');
   const [otpToken, setOtpToken] = useState<string | null>(null);
@@ -42,6 +42,14 @@ export default function AdminPage() {
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  // Load saved email from localStorage on mount (client-side only)
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('etz_admin_email_input');
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+  }, []);
 
   // Load configured admin email hint on mount
   useEffect(() => {
