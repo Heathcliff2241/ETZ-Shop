@@ -18,7 +18,9 @@ function isMailConfigured() {
 }
 
 export async function sendOtp(toEmail: string, code: string): Promise<void> {
-  if (!isMailConfigured()) return;
+  if (!isMailConfigured()) {
+    throw new Error('SMTP is not configured on the server.');
+  }
 
   await transporter.sendMail({
     from: `"ETZ" <${process.env.SMTP_USER}>`,
