@@ -12,13 +12,13 @@ export default function ShopContentWrapper() {
   const { products, cart, wishlist, recentlyViewed, addToCart, toggleWishlist } = useApp();
 
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<Category | 'all'>(
-    (searchParams.get('category') as Category) || 'all'
+    (searchParams?.get('category') as Category) || 'all'
   );
   const [activeConditionFilter, setActiveConditionFilter] = useState<string>('all');
   const [activeSizeFilter, setActiveSizeFilter] = useState<string>('all');
 
   useEffect(() => {
-    const cat = searchParams.get('category') as Category;
+    const cat = searchParams?.get('category') as Category;
     if (cat) {
       setActiveCategoryFilter(cat);
     }

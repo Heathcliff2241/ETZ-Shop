@@ -1052,7 +1052,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
 
                   
                   <button
-                    onClick={fetchOrders}
+                    onClick={() => fetchOrders()}
                     disabled={ordersLoading}
                     className="flex items-center gap-1.5 text-xs text-[#6B6B65] hover:text-[#1C1C1A] transition-colors cursor-pointer bg-transparent border-none shrink-0"
                   >
