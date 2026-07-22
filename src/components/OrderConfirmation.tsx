@@ -6,12 +6,14 @@ import { Order } from '../types';
 interface OrderConfirmationProps {
   lastSubmittedOrder: Order | null;
   shopGcash: string;
+  shopGcashName?: string;
   onNavigate: (page: string, category?: any) => void;
 }
 
 export default function OrderConfirmation({
   lastSubmittedOrder,
   shopGcash,
+  shopGcashName,
   onNavigate
 }: OrderConfirmationProps) {
   return (
@@ -60,7 +62,7 @@ export default function OrderConfirmation({
         <div className="bg-accent/5 p-4.5 rounded-xl border border-accent/10 text-xs text-text-secondary leading-relaxed text-left space-y-1.5">
           <strong className="text-text-primary block font-heading text-sm mb-0.5">Direct GCash Payment Reminder</strong>
           <p>
-            Payment is arranged directly with us — **GCash transfer** directly to **{shopGcash}** or Cash on pickup/delivery once we've confirmed your order details. No automatic card charges!
+            Payment is arranged directly with us — **GCash transfer** directly to **{shopGcash}**{shopGcashName ? ` (${shopGcashName})` : ''} or Cash on pickup/delivery once we've confirmed your order details. No automatic card charges!
           </p>
         </div>
 

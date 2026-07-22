@@ -19,6 +19,8 @@ function toOrder(row: Record<string, unknown>) {
     items: row.items,
     subtotal: Number(row.subtotal),
     status: row.status,
+    paymentMethod: row.payment_method || 'cash',
+    paymentStatus: row.payment_status || 'unpaid',
     dateCreated: row.date_created,
   };
 }
@@ -52,15 +54,45 @@ ordersRouter.post('/', asyncHandler(async (req: Request, res: Response) => {
   const dateCreated = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
   const items = Array.isArray(o.items) ? o.items : [];
 
+  const paymentMethod = (o.paymentMethod === 'gcash' || o.paymentMethod === 'cash') ? String(o.paymentMethod) : 'cash';
+  // GCash orders start as 'gcash_pending', cash orders as 'unpaid' (payment on delivery)
+  const paymentStatus = paymentMethod === 'gcash' ? 'gcash_pending' : 'unpaid';
+
+  // ── Concurrency & Double-Order Check ──────────────────────────────────────────
+  const requestedProductIds = (items as Array<{ productId?: string }>)
+    .map(i => i.productId)
+    .filter((pid): pid is string => Boolean(pid));
+
+  if (requestedProductIds.length > 0) {
+    const alreadySold = await sql`
+      SELECT id, name FROM etz_products 
+      WHERE id = ANY(${requestedProductIds}) AND is_sold = true
+    ` as Array<{ id: string; name: string }>;
+
+    if (alreadySold.length > 0) {
+      const soldNames = alreadySold.map(p => `"${p.name}"`).join(', ');
+      return res.status(409).json({ 
+        error: `Sorry, ${soldNames} was just reserved or purchased by another customer! Please remove it from your cart.` 
+      });
+    }
+  }
+
+  // Ensure columns exist (idempotent — will no-op if already present)
+  try {
+    await sql`ALTER TABLE etz_orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash'`;
+    await sql`ALTER TABLE etz_orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(30) DEFAULT 'unpaid'`;
+  } catch { /* ignore if not supported */ }
+
   await sql`
     INSERT INTO etz_orders
       (id, customer_name, customer_phone, customer_email, delivery_method,
-       delivery_address, contact_method, note, items, subtotal, status, date_created)
+       delivery_address, contact_method, note, items, subtotal, status,
+       payment_method, payment_status, date_created)
     VALUES
       (${id}, ${String(o.customerName)}, ${String(o.customerPhone)}, ${String(o.customerEmail)},
        ${String(o.deliveryMethod)}, ${o.deliveryAddress ? String(o.deliveryAddress) : null}, ${o.contactMethod ? String(o.contactMethod) : null},
        ${o.note ? String(o.note) : null}, ${JSON.stringify(items)}, ${Number(o.subtotal)},
-       'pending', ${dateCreated})
+       'pending', ${paymentMethod}, ${paymentStatus}, ${dateCreated})
   `;
 
   const now = new Date().toISOString();
@@ -80,6 +112,7 @@ ordersRouter.post('/', asyncHandler(async (req: Request, res: Response) => {
       customerEmail: String(o.customerEmail),
       status: 'pending',
       subtotal: Number(o.subtotal),
+      paymentMethod: paymentMethod as 'gcash' | 'cash',
       items: Array.isArray(items) ? items.map((item) => ({ productName: typeof item.productName === 'string' ? item.productName : undefined, productId: typeof item.productId === 'string' ? item.productId : undefined })) : [],
     }, true);
   } catch (error) {
@@ -98,7 +131,7 @@ ordersRouter.get('/', requireAdmin, asyncHandler(async (_req: Request, res: Resp
 // ── PUT /api/orders/:id/status  (admin only) ──────────────────────────────────
 ordersRouter.put('/:id/status', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
   const { status } = req.body as { status?: string };
-  const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+  const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'picked_up', 'cancelled'];
 
   if (!status || !validStatuses.includes(status)) {
     return res.status(400).json({ error: 'Invalid status.' });
@@ -118,22 +151,40 @@ ordersRouter.put('/:id/status', requireAdmin, asyncHandler(async (req: Request, 
     }
   }
 
-  const rows = await sql`SELECT * FROM etz_orders WHERE id = ${req.params.id}` as Array<Record<string, unknown>>;
-  if (rows.length === 0) return res.status(404).json({ error: 'Not found.' });
+  const rows2 = await sql`SELECT * FROM etz_orders WHERE id = ${req.params.id}` as Array<Record<string, unknown>>;
+  if (rows2.length === 0) return res.status(404).json({ error: 'Not found.' });
 
   try {
-    const order = rows[0] as Record<string, unknown>;
+    const order = rows2[0] as Record<string, unknown>;
     await sendOrderNotification({
       id: String(order.id),
       customerName: String(order.customer_name || ''),
       customerEmail: String(order.customer_email || ''),
       status,
       subtotal: Number(order.subtotal || 0),
+      paymentMethod: (String(order.payment_method || 'cash')) as 'gcash' | 'cash',
       items: Array.isArray(order.items) ? order.items as Array<{ productName?: string; productId?: string }> : [],
     }, false);
   } catch (error) {
     console.warn('[orders] Failed to send order status notification.', error);
   }
+
+  return res.json(toOrder(rows2[0]));
+}));
+
+// ── PUT /api/orders/:id/payment-status  (admin only) ─────────────────────────
+ordersRouter.put('/:id/payment-status', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
+  const { paymentStatus } = req.body as { paymentStatus?: string };
+  const validPaymentStatuses = ['unpaid', 'gcash_pending', 'paid', 'refunded'];
+
+  if (!paymentStatus || !validPaymentStatuses.includes(paymentStatus)) {
+    return res.status(400).json({ error: 'Invalid payment status.' });
+  }
+
+  await sql`UPDATE etz_orders SET payment_status = ${paymentStatus} WHERE id = ${req.params.id}`;
+
+  const rows = await sql`SELECT * FROM etz_orders WHERE id = ${req.params.id}` as Array<Record<string, unknown>>;
+  if (rows.length === 0) return res.status(404).json({ error: 'Not found.' });
 
   return res.json(toOrder(rows[0]));
 }));

@@ -13,16 +13,30 @@ const SESSION_SECRET = process.env.SESSION_SECRET || 'changeme';
 const OTP_EXPIRY_MINUTES = 10;
 
 // ── Get Public Login Hint ────────────────────────────────────────────────────
-adminRouter.get('/login-hint', (req: Request, res: Response) => {
+adminRouter.get('/login-hint', async (req: Request, res: Response) => {
+  try {
+    const rows = await sql`SELECT key, value FROM etz_settings WHERE key = 'adminEmail'`;
+    if (rows && rows.length > 0 && rows[0].value) {
+      adminConfig.updateConfig({ adminEmail: String(rows[0].value) });
+    }
+  } catch {}
   return res.json({ email: adminConfig.getAdminEmail() });
 });
 
 // ── Request OTP ──────────────────────────────────────────────────────────────
 adminRouter.post('/request-otp', async (req: Request, res: Response) => {
   const { email } = req.body as { email?: string };
+
+  try {
+    const rows = await sql`SELECT key, value FROM etz_settings WHERE key = 'adminEmail'`;
+    if (rows && rows.length > 0 && rows[0].value) {
+      adminConfig.updateConfig({ adminEmail: String(rows[0].value) });
+    }
+  } catch {}
+
   const allowedAdminEmail = adminConfig.getAdminEmail();
 
-  if (!email || email.toLowerCase() !== allowedAdminEmail.toLowerCase()) {
+  if (!email || email.toLowerCase().trim() !== allowedAdminEmail.toLowerCase().trim()) {
     return res.status(403).json({ error: 'Not authorized.' });
   }
 
@@ -107,34 +121,48 @@ adminRouter.post('/verify-otp', async (req: Request, res: Response) => {
   return res.json({ ok: true, token });
 });
 
-// ── Get Admin Settings ────────────────────────────────────────────────────────
-adminRouter.get('/settings', requireAdmin, (req: Request, res: Response) => {
-  return res.json({
-    adminEmail: adminConfig.getAdminEmail(),
-    notificationEmail: adminConfig.getNotificationEmail(),
-  });
+// ── Get Public Shop Settings ──────────────────────────────────────────────────
+adminRouter.get('/public-settings', (_req: Request, res: Response) => {
+  return res.json(adminConfig.getPublicConfig());
 });
 
-// ── Update Admin Settings ─────────────────────────────────────────────────────
-adminRouter.put('/settings', requireAdmin, (req: Request, res: Response) => {
-  const {
-    adminEmail,
-    notificationEmail,
-  } = req.body as {
-    adminEmail?: string;
-    notificationEmail?: string;
-  };
+// ── Get Admin Settings (Protected) ───────────────────────────────────────────
+adminRouter.get('/settings', requireAdmin, (_req: Request, res: Response) => {
+  return res.json(adminConfig.getAllConfig());
+});
 
-  if (!adminEmail || !notificationEmail) {
-    return res.status(400).json({ error: 'Both adminEmail and notificationEmail are required.' });
+// ── Update Admin Settings (Protected) ──────────────────────────────────────────
+adminRouter.put('/settings', requireAdmin, async (req: Request, res: Response) => {
+  const updates = req.body;
+  if (!updates || typeof updates !== 'object') {
+    return res.status(400).json({ error: 'Invalid settings payload.' });
+  }
+
+  if (updates.adminEmail && !updates.adminEmail.trim()) {
+    return res.status(400).json({ error: 'Admin Email cannot be empty.' });
+  }
+
+  if (updates.notificationEmail && !updates.notificationEmail.trim()) {
+    return res.status(400).json({ error: 'Notification Email cannot be empty.' });
   }
 
   try {
-    adminConfig.updateConfig(
-      adminEmail,
-      notificationEmail
-    );
-    return res.json({ ok: true, message: 'Settings updated successfully.' });
+    const updated = adminConfig.updateConfig(updates);
+
+    try {
+      for (const [key, value] of Object.entries(updated)) {
+        await sql`
+          INSERT INTO etz_settings (key, value)
+          VALUES (${key}, ${String(value)})
+          ON CONFLICT (key) DO UPDATE SET value = ${String(value)}
+        `;
+      }
+      console.log('[admin] Successfully saved updated settings to DB.');
+    } catch (dbErr) {
+      console.warn('[admin] Failed to save settings to DB:', dbErr);
+    }
+
+    return res.json({ ok: true, message: 'Settings updated successfully.', settings: updated });
   } catch (err) {
     console.error('[admin] Failed to update settings:', err);
     return res.status(500).json({ error: 'Failed to update settings.' });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { Loader2 } from 'lucide-react';
 import { CartItem } from '../types';
 
 interface CheckoutProps {
@@ -18,7 +19,11 @@ interface CheckoutProps {
   setContactMethod: (val: 'phone' | 'email' | 'facebook') => void;
   note: string;
   setNote: (val: string) => void;
+  paymentMethod: 'gcash' | 'cash';
+  setPaymentMethod: (val: 'gcash' | 'cash') => void;
   shopGcash: string;
+  shopGcashName?: string;
+  isOrdering?: boolean;
   handlePlaceOrder: (e: React.FormEvent) => void;
   onNavigate: (page: string) => void;
 }
@@ -39,11 +44,22 @@ export default function Checkout({
   setContactMethod,
   note,
   setNote,
+  paymentMethod,
+  setPaymentMethod,
   shopGcash,
+  shopGcashName = 'Cesar E.',
+  isOrdering = false,
   handlePlaceOrder,
   onNavigate
 }: CheckoutProps) {
+  const [copied, setCopied] = React.useState(false);
   const subtotal = cart.reduce((acc, item) => acc + item.product.price, 0);
+
+  const handleCopyGcash = () => {
+    navigator.clipboard.writeText(shopGcash.replace(/\s+/g, ''));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div
@@ -52,7 +68,7 @@ export default function Checkout({
     >
       <div className="border-b border-border pb-4">
         <h1 className="font-heading text-3xl font-bold text-text-primary">Place Order Request</h1>
-        <p className="text-xs text-text-secondary uppercase tracking-widest font-mono font-bold">Almost Done - No Online Payment Required</p>
+        <p className="text-xs text-text-secondary uppercase tracking-widest font-mono font-bold">Simple & Secure Checkout</p>
       </div>
 
       {cart.length === 0 ? (
@@ -66,7 +82,7 @@ export default function Checkout({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Checkout Form */}
           <form onSubmit={handlePlaceOrder} className="lg:col-span-7 bg-white border border-border p-6 rounded-3xl space-y-5 shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
-            <h3 className="font-heading text-lg font-bold text-accent border-b border-border pb-2">Your Contact & Shipping Info</h3>
+            <h3 className="font-heading text-lg font-bold text-accent border-b border-border pb-2">1. Your Contact & Shipping Info</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -180,17 +196,103 @@ export default function Checkout({
                   />
                 </div>
               )}
+            </div>
 
-              <div className="space-y-1 md:col-span-2">
-                <label className="text-[10px] font-mono tracking-wider font-bold text-text-secondary uppercase block">Optional Note (sizing questions / flaws check)</label>
-                <textarea
-                  rows={2}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="e.g. Please let me know if the waist can stretch, or I confirm the condition..."
-                  className="w-full bg-surface-tint-alt border border-border rounded-lg px-3.5 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-                />
+            {/* 2. Payment Method Selection */}
+            <div className="pt-3 border-t border-border space-y-3">
+              <h3 className="font-heading text-lg font-bold text-accent">2. Payment Method</h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* GCash Radio Option */}
+                <div
+                  onClick={() => setPaymentMethod('gcash')}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    paymentMethod === 'gcash'
+                      ? 'border-[#2D6A4F] bg-[#2D6A4F]/5 ring-1 ring-[#2D6A4F]'
+                      : 'border-border bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={paymentMethod === 'gcash'}
+                      onChange={() => setPaymentMethod('gcash')}
+                      className="text-accent focus:ring-accent"
+                    />
+                    <span className="font-bold text-xs text-text-primary">GCash Transfer</span>
+                  </div>
+                  <p className="text-[11px] text-text-secondary pl-5">Pay directly using GCash. Owner details provided below.</p>
+                </div>
+
+                {/* Cash Option */}
+                <div
+                  onClick={() => setPaymentMethod('cash')}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    paymentMethod === 'cash'
+                      ? 'border-[#2D6A4F] bg-[#2D6A4F]/5 ring-1 ring-[#2D6A4F]'
+                      : 'border-border bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={paymentMethod === 'cash'}
+                      onChange={() => setPaymentMethod('cash')}
+                      className="text-accent focus:ring-accent"
+                    />
+                    <span className="font-bold text-xs text-text-primary">Cash on Delivery / Pickup</span>
+                  </div>
+                  <p className="text-[11px] text-text-secondary pl-5">Pay in cash when you pick up or receive the parcel.</p>
+                </div>
               </div>
+
+              {/* Display Owner GCash Card */}
+              {paymentMethod === 'gcash' && (
+                <div className="bg-[#2D6A4F]/8 border border-[#2D6A4F]/30 p-4.5 rounded-2xl space-y-3 mt-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center font-mono font-bold text-xs">
+                        GC
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-text-primary uppercase tracking-wide">Owner GCash Account</p>
+                        <p className="text-[11px] text-text-secondary">Send total: <strong>₱{subtotal.toLocaleString()}</strong></p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyGcash}
+                      className="text-[11px] font-semibold text-[#2D6A4F] bg-white border border-[#2D6A4F]/30 hover:bg-[#2D6A4F] hover:text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      {copied ? '✓ Copied!' : 'Copy GCash #'}
+                    </button>
+                  </div>
+
+                  <div className="bg-white border border-[#2D6A4F]/20 rounded-xl p-3 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-[10px] text-text-secondary uppercase font-mono block">Account Name</span>
+                      <strong className="text-text-primary">{shopGcashName}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-text-secondary uppercase font-mono block">GCash Number</span>
+                      <strong className="font-mono text-[#2D6A4F] text-sm">{shopGcash}</strong>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1 md:col-span-2 pt-2">
+              <label className="text-[10px] font-mono tracking-wider font-bold text-text-secondary uppercase block">Optional Note (sizing questions / flaws check)</label>
+              <textarea
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="e.g. Please let me know if the waist can stretch, or I confirm the condition..."
+                className="w-full bg-surface-tint-alt border border-border rounded-lg px-3.5 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+              />
             </div>
 
             <div className="pt-4 border-t border-border flex justify-between items-center">
@@ -203,10 +305,20 @@ export default function Checkout({
               </button>
               <button
                 type="submit"
-                className="bg-[#2D6A4F] hover:bg-[#245840] text-white font-semibold py-3 px-8 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer active:scale-[0.98] border-none"
+                disabled={isOrdering}
+                className={`bg-[#2D6A4F] hover:bg-[#245840] text-white font-semibold py-3 px-8 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer border-none flex items-center gap-2 ${
+                  isOrdering ? 'opacity-60 cursor-not-allowed' : 'active:scale-[0.98]'
+                }`}
                 id="btn-place-order"
               >
-                Place Order (₱0 Upfront)
+                {isOrdering ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Placing Order Request...</span>
+                  </>
+                ) : (
+                  <span>Place Order (₱0 Upfront)</span>
+                )}
               </button>
             </div>
           </form>

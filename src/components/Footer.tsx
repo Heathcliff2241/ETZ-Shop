@@ -7,9 +7,22 @@ interface FooterProps {
   shopEmail: string;
   shopPhone: string;
   shopFacebook: string;
+  shopName?: string;
+  shopAddress?: string;
+  shopTagline?: string;
+  shopInstagram?: string;
 }
 
-export default function Footer({ onNavigate, shopEmail, shopPhone, shopFacebook }: FooterProps) {
+export default function Footer({
+  onNavigate,
+  shopEmail,
+  shopPhone,
+  shopFacebook,
+  shopName = 'ETZ',
+  shopAddress = 'Tagbilaran City, Bohol, Philippines',
+  shopTagline = 'Curated secondhand clothing & thrift items.',
+  shopInstagram,
+}: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -23,14 +36,14 @@ export default function Footer({ onNavigate, shopEmail, shopPhone, shopFacebook 
               onClick={() => onNavigate('home')}
               className="font-heading text-2xl tracking-tight text-white block cursor-pointer hover:text-[#D4A853] transition-colors duration-300"
             >
-              ETZ
+              {shopName}
             </button>
             <p className="text-[14px] leading-relaxed text-white/70 max-w-sm">
-              Curated secondhand clothing from Loong, Tabogon, Cebu. Every item is washed, measured, and photographed before it reaches you.
+              {shopTagline}
             </p>
             <div className="flex items-center gap-2 text-[13px] text-[#D4A853]/90 font-medium">
               <MapPin className="w-4 h-4 shrink-0" />
-              <span>Loong, Tabogon, Cebu, Philippines</span>
+              <span>{shopAddress}</span>
             </div>
           </div>
 
@@ -117,6 +130,14 @@ export default function Footer({ onNavigate, shopEmail, shopPhone, shopFacebook 
                   Facebook page
                 </a>
               </li>
+              {shopInstagram && (
+                <li className="flex items-center gap-3">
+                  <span className="text-[#D4A853]/70 font-semibold text-xs shrink-0">IG</span>
+                  <a href={shopInstagram} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                    Instagram
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>
@@ -124,7 +145,7 @@ export default function Footer({ onNavigate, shopEmail, shopPhone, shopFacebook 
         {/* Footer Bottom */}
         <div className="mt-14 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-[12px] text-white/40">
           <div>
-            &copy; {currentYear} ETZ. Tabogon, Cebu. All rights reserved.
+            &copy; {currentYear} {shopName}. {shopAddress}. All rights reserved.
           </div>
           <div className="flex items-center gap-6">
             <button

@@ -41,7 +41,9 @@ export interface Order {
     image: string;
   }[];
   subtotal: number;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'picked_up' | 'cancelled';
+  paymentMethod: 'gcash' | 'cash';
+  paymentStatus: 'unpaid' | 'gcash_pending' | 'paid' | 'refunded';
   dateCreated: string;
 }
 
@@ -52,3 +54,19 @@ export interface ContactMessage {
   message: string;
   dateCreated: string;
 }
+
+export interface ShopSettings {
+  adminEmail?: string;
+  notificationEmail?: string;
+  shopName: string;
+  ownerName: string;
+  shopEmail: string;
+  shopPhone: string;
+  shopFacebook: string;
+  shopInstagram: string;
+  shopGcash: string;
+  shopGcashName: string;
+  shopAddress: string;
+  shopTagline: string;
+}
+

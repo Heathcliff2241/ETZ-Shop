@@ -45,6 +45,7 @@ export async function sendOrderNotification(
     customerEmail: string;
     status: string;
     subtotal: number;
+    paymentMethod?: 'gcash' | 'cash';
     items: Array<{ productName?: string; productId?: string }>;
   },
   notifyAdmin: boolean = false
@@ -74,6 +75,9 @@ export async function sendOrderNotification(
     : '';
   const adminUrl = appUrl ? `${appUrl.replace(/\/$/, '')}/admin` : '/admin';
 
+  const paymentLabel = order.paymentMethod === 'gcash' ? 'GCash Transfer' : 'Cash on Delivery / Pickup';
+  const paymentBadgeColor = order.paymentMethod === 'gcash' ? '#2563eb' : '#6b7280';
+
   const adminHtml = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background: #FAF9F5; border: 1px solid #e8e6df; color: #1c1c1a;">
       <h2 style="margin: 0 0 6px; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #1c1c1a;">ETZ</h2>
@@ -85,8 +89,17 @@ export async function sendOrderNotification(
         <p style="margin: 0 0 10px; border-bottom: 1px solid #f2f0ea; padding-bottom: 10px;"><strong style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; color: #8c8c80; display: block; margin-bottom: 2px;">Order ID</strong> <span style="font-size: 15px; font-weight: 600;">${order.id}</span></p>
         <p style="margin: 0 0 10px; border-bottom: 1px solid #f2f0ea; padding-bottom: 10px;"><strong style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; color: #8c8c80; display: block; margin-bottom: 2px;">Customer Details</strong> <strong>${order.customerName}</strong> (${order.customerEmail})</p>
         <p style="margin: 0 0 10px; border-bottom: 1px solid #f2f0ea; padding-bottom: 10px;"><strong style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; color: #8c8c80; display: block; margin-bottom: 2px;">Garments Purchased</strong> ${itemSummary || 'No items listed'}</p>
-        <p style="margin: 0;"><strong style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; color: #8c8c80; display: block; margin-bottom: 2px;">Subtotal (GCash / Cash)</strong> <span style="font-size: 16px; font-weight: 700; color: #2D6A4F;">₱${Number(order.subtotal).toLocaleString()}</span></p>
+        <p style="margin: 0 0 10px; border-bottom: 1px solid #f2f0ea; padding-bottom: 10px;">
+          <strong style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; color: #8c8c80; display: block; margin-bottom: 2px;">Payment Method</strong>
+          <span style="background: ${paymentBadgeColor}; color: #ffffff; padding: 2px 10px; font-size: 11px; font-weight: 700; border-radius: 4px; font-family: monospace;">${paymentLabel}</span>
+        </p>
+        <p style="margin: 0;"><strong style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; color: #8c8c80; display: block; margin-bottom: 2px;">Total Due</strong> <span style="font-size: 16px; font-weight: 700; color: #2D6A4F;">₱${Number(order.subtotal).toLocaleString()}</span></p>
       </div>
+      ${order.paymentMethod === 'gcash' ? `
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px 20px; border-radius: 6px; margin: 16px 0; font-size: 13px; color: #1e40af;">
+        <strong style="display: block; margin-bottom: 4px;">⚠️ GCash Payment – Action Required</strong>
+        This customer has chosen to pay via GCash. Please check your GCash inbox for a transfer of <strong>₱${Number(order.subtotal).toLocaleString()}</strong> from this customer before confirming the order. Once verified, update the Payment Status to <strong>Paid</strong> in the Admin Panel.
+      </div>` : ''}
       <div style="margin-top: 32px; text-align: center;">
         <a href="${adminUrl}" style="display: inline-block; background: #1c1c1a; color: #ffffff; text-decoration: none; padding: 14px 28px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; border: none; transition: background 0.3s;">
           Open Admin Panel
@@ -120,6 +133,15 @@ export async function sendOrderNotification(
         <li style="margin-bottom: 6px;"><strong>Inspect on Arrival:</strong> When your beautifully-sorted thrift gems arrive, open them up and enjoy your sustainable new pieces!</li>
       `;
       break;
+    case 'picked_up':
+      statusBadgeColor = '#0d9488'; // teal
+      customerMessage = `Your order has been officially <strong>PICKED UP & COMPLETED</strong>! We hope these hand-selected thrift pieces bring you joy and a great fit. Thank you for visiting us and supporting sustainable 1-of-1 fashion.`;
+      nextStepsHtml = `
+        <li style="margin-bottom: 6px;"><strong>Give them love:</strong> Wear them with pride! You have officially given these garments their next chapter.</li>
+        <li style="margin-bottom: 6px;"><strong>Share your fit:</strong> Tag us or tell your friends about your new favorite find!</li>
+        <li style="margin-bottom: 6px;"><strong>Visit us again:</strong> Check back regularly as we add curated secondhand treasures to our collection.</li>
+      `;
+      break;
     case 'delivered':
       statusBadgeColor = '#059669'; // emerald
       customerMessage = `Your order has been officially marked as <strong>DELIVERED & COMPLETED</strong>! We hope these beautiful pieces bring you joy and a great fit. Thank you for supporting sustainable 1-of-1 fashion here in Cebu.`;
@@ -145,6 +167,10 @@ export async function sendOrderNotification(
         <li style="margin-bottom: 6px;"><strong>Final Quality Check:</strong> We inspect every item under high-intensity light to verify its exact condition.</li>
         <li style="margin-bottom: 6px;"><strong>Order Confirmation:</strong> Once checked, we will approve the order and notify you via email and SMS.</li>
         <li style="margin-bottom: 6px;"><strong>Arrange Handover:</strong> We will reach out to organize your local pickup in Loong, Tabogon, or arrange direct courier shipping across Cebu.</li>
+        ${order.paymentMethod === 'gcash'
+          ? `<li style="margin-bottom: 6px;"><strong>GCash Payment:</strong> Please send <strong>₱${Number(order.subtotal).toLocaleString()}</strong> to the GCash number provided in your checkout. Your order will be confirmed once we verify receipt of your payment.</li>`
+          : `<li style="margin-bottom: 6px;"><strong>Cash Payment:</strong> You have selected Cash on Delivery / Pickup. You will pay once you receive or pick up the parcel — no upfront payment needed!</li>`
+        }
       `;
       break;
   }

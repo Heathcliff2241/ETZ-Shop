@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import dotenv from 'dotenv';
+import { adminConfig } from './adminConfig.js';
 dotenv.config();
 
 let sqlInstance: any = null;
@@ -455,6 +456,23 @@ export async function initDb() {
         date_created TEXT
       )
     `;
+
+    await sqlInstance`
+      CREATE TABLE IF NOT EXISTS etz_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `;
+
+    try {
+      const settingsRows = await sqlInstance`SELECT key, value FROM etz_settings`;
+      if (settingsRows && Array.isArray(settingsRows) && settingsRows.length > 0) {
+        adminConfig.loadFromRows(settingsRows as any);
+        console.log('[db] Successfully loaded admin settings from database.');
+      }
+    } catch (e) {
+      console.warn('[db] Could not load settings from etz_settings table:', e);
+    }
   } catch (error) {
     console.warn('[db] Database initialization failed; continuing without persistence.', error);
   }

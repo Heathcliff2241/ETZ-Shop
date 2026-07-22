@@ -7,6 +7,9 @@ interface ContactProps {
   shopEmail: string;
   shopFacebook: string;
   shopGcash: string;
+  shopGcashName?: string;
+  shopAddress?: string;
+  ownerName?: string;
   contactName: string;
   setContactName: (val: string) => void;
   contactEmail: string;
@@ -23,6 +26,9 @@ export default function Contact({
   shopEmail,
   shopFacebook,
   shopGcash,
+  shopGcashName,
+  shopAddress = 'Tagbilaran City, Bohol, Philippines',
+  ownerName,
   contactName,
   setContactName,
   contactEmail,
@@ -104,6 +110,13 @@ export default function Contact({
           <h3 className="font-heading text-lg font-medium text-accent">Direct Store Info</h3>
           
           <div className="space-y-4 text-xs sm:text-sm text-text-primary">
+            {ownerName && (
+              <div>
+                <strong className="block text-[10px] uppercase text-text-secondary font-mono tracking-wider font-bold">Store Owner</strong>
+                <span className="font-medium text-text-primary">{ownerName}</span>
+              </div>
+            )}
+
             <div className="flex items-start gap-3">
               <Mail className="w-5 h-5 text-accent shrink-0 mt-0.5" />
               <div>
@@ -124,7 +137,7 @@ export default function Contact({
               <Phone className="w-5 h-5 text-accent shrink-0 mt-0.5" />
               <div>
                 <strong className="block text-[10px] uppercase text-text-secondary font-mono tracking-wider font-bold">GCash Receiver</strong>
-                <span className="font-mono font-bold text-accent">{shopGcash}</span>
+                <span className="font-mono font-bold text-accent">{shopGcash} {shopGcashName ? `(${shopGcashName})` : ''}</span>
               </div>
             </div>
 
@@ -132,7 +145,7 @@ export default function Contact({
               <MapPin className="w-5 h-5 text-accent shrink-0 mt-0.5" />
               <div>
                 <strong className="block text-[10px] uppercase text-text-secondary font-mono tracking-wider font-bold">Location</strong>
-                <span>Loong, Tabogon, Cebu</span>
+                <span>{shopAddress}</span>
               </div>
             </div>
           </div>

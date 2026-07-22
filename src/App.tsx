@@ -98,9 +98,15 @@ export default function App() {
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
 
   // Owner Config States
+  const [shopName, setShopName] = useState('ETZ A SHOPPE');
+  const [ownerName, setOwnerName] = useState('Cesar Esmero');
+  const [shopTagline, setShopTagline] = useState('Curated Thrift & Vintage Marketplace');
+  const [shopAddress, setShopAddress] = useState('Tagbilaran City, Bohol, Philippines');
   const [shopEmail, setShopEmail] = useState('cesaresmero2@gmail.com');
   const [shopPhone, setShopPhone] = useState('+63 912 345 6789');
   const [shopFacebook, setShopFacebook] = useState('https://www.facebook.com/profile.php?id=100064749982511');
+  const [shopInstagram, setShopInstagram] = useState('https://instagram.com/etzashoppe');
+  const [shopGcashName, setShopGcashName] = useState('Cesar E.');
   const [shopGcash, setShopGcash] = useState('0912 345 6789');
 
   // Checkout Form State
@@ -111,6 +117,7 @@ export default function App() {
   const [address, setAddress] = useState('');
   const [contactMethod, setContactMethod] = useState<'phone' | 'email' | 'facebook'>('phone');
   const [note, setNote] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'gcash' | 'cash'>('gcash');
 
   // Contact Form State
   const [contactName, setContactName] = useState('');
@@ -182,6 +189,37 @@ export default function App() {
     };
     fetchFreshProducts();
 
+    // Fetch public shop settings from server backend
+    const fetchShopSettings = async () => {
+      try {
+        const res = await fetch('/api/admin/public-settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.shopName) setShopName(data.shopName);
+          if (data.ownerName) setOwnerName(data.ownerName);
+          if (data.shopTagline) setShopTagline(data.shopTagline);
+          if (data.shopAddress) setShopAddress(data.shopAddress);
+          if (data.shopEmail) setShopEmail(data.shopEmail);
+          if (data.shopPhone) setShopPhone(data.shopPhone);
+          if (data.shopFacebook) setShopFacebook(data.shopFacebook);
+          if (data.shopInstagram) setShopInstagram(data.shopInstagram);
+          if (data.shopGcashName) setShopGcashName(data.shopGcashName);
+          if (data.shopGcash) setShopGcash(data.shopGcash);
+          
+          localStorage.setItem('etz_settings', JSON.stringify({
+            ...data,
+            email: data.shopEmail,
+            phone: data.shopPhone,
+            facebook: data.shopFacebook,
+            gcash: data.shopGcash,
+          }));
+        }
+      } catch (err) {
+        console.warn('[app] Could not fetch public settings from backend:', err);
+      }
+    };
+    fetchShopSettings();
+
     // Cart
     const storedCart = localStorage.getItem('etz_cart');
     if (storedCart) {
@@ -212,15 +250,21 @@ export default function App() {
       setRecentlyViewed(JSON.parse(storedRecently));
     }
 
-    // Settings
+    // Settings (localStorage fallback cache)
     const storedSettings = localStorage.getItem('etz_settings');
     if (storedSettings) {
       try {
         const parsed = JSON.parse(storedSettings);
-        setShopEmail(parsed.email || 'cesaresmero2@gmail.com');
-        setShopPhone(parsed.phone || '+63 912 345 6789');
-        setShopFacebook(parsed.facebook || 'https://www.facebook.com/profile.php?id=100064749982511');
-        setShopGcash(parsed.gcash || '0912 345 6789');
+        if (parsed.shopName) setShopName(parsed.shopName);
+        if (parsed.ownerName) setOwnerName(parsed.ownerName);
+        if (parsed.shopTagline) setShopTagline(parsed.shopTagline);
+        if (parsed.shopAddress) setShopAddress(parsed.shopAddress);
+        if (parsed.email || parsed.shopEmail) setShopEmail(parsed.email || parsed.shopEmail);
+        if (parsed.phone || parsed.shopPhone) setShopPhone(parsed.phone || parsed.shopPhone);
+        if (parsed.facebook || parsed.shopFacebook) setShopFacebook(parsed.facebook || parsed.shopFacebook);
+        if (parsed.instagram || parsed.shopInstagram) setShopInstagram(parsed.instagram || parsed.shopInstagram);
+        if (parsed.gcashName || parsed.shopGcashName) setShopGcashName(parsed.gcashName || parsed.shopGcashName);
+        if (parsed.gcash || parsed.shopGcash) setShopGcash(parsed.gcash || parsed.shopGcash);
       } catch (e) {
         console.error('Failed to parse settings from localStorage', e);
       }
@@ -238,10 +282,16 @@ export default function App() {
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          setShopEmail(parsed.email || 'cesaresmero2@gmail.com');
-          setShopPhone(parsed.phone || '+63 912 345 6789');
-          setShopFacebook(parsed.facebook || 'https://www.facebook.com/profile.php?id=100064749982511');
-          setShopGcash(parsed.gcash || '0912 345 6789');
+          if (parsed.shopName) setShopName(parsed.shopName);
+          if (parsed.ownerName) setOwnerName(parsed.ownerName);
+          if (parsed.shopTagline) setShopTagline(parsed.shopTagline);
+          if (parsed.shopAddress) setShopAddress(parsed.shopAddress);
+          if (parsed.email || parsed.shopEmail) setShopEmail(parsed.email || parsed.shopEmail);
+          if (parsed.phone || parsed.shopPhone) setShopPhone(parsed.phone || parsed.shopPhone);
+          if (parsed.facebook || parsed.shopFacebook) setShopFacebook(parsed.facebook || parsed.shopFacebook);
+          if (parsed.instagram || parsed.shopInstagram) setShopInstagram(parsed.instagram || parsed.shopInstagram);
+          if (parsed.gcashName || parsed.shopGcashName) setShopGcashName(parsed.gcashName || parsed.shopGcashName);
+          if (parsed.gcash || parsed.shopGcash) setShopGcash(parsed.gcash || parsed.shopGcash);
         } catch {}
       }
     };
@@ -406,6 +456,7 @@ export default function App() {
       deliveryAddress: deliveryMethod === 'delivery' ? address : undefined,
       contactMethod,
       note,
+      paymentMethod,
       items: cart.map(item => ({
         productId: item.product.id,
         productName: item.product.name,
@@ -484,7 +535,9 @@ export default function App() {
         id: fallbackId,
         status: 'pending',
         dateCreated: new Date().toLocaleString(),
+        paymentStatus: 'unpaid' as const,
         items: orderPayload.items.map(item => ({ ...item, condition: item.condition as any }))
+
       };
 
       const updatedOrders = [fallbackOrder, ...orders];
@@ -797,6 +850,9 @@ export default function App() {
                 shopEmail={shopEmail}
                 shopFacebook={shopFacebook}
                 shopGcash={shopGcash}
+                shopGcashName={shopGcashName}
+                shopAddress={shopAddress}
+                ownerName={ownerName}
                 contactName={contactName}
                 setContactName={setContactName}
                 contactEmail={contactEmail}
@@ -852,7 +908,11 @@ export default function App() {
                 setContactMethod={setContactMethod}
                 note={note}
                 setNote={setNote}
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
                 shopGcash={shopGcash}
+                shopGcashName={shopGcashName}
+                isOrdering={isOrdering}
                 handlePlaceOrder={handlePlaceOrder}
                 onNavigate={handleNavigate}
               />
@@ -871,6 +931,7 @@ export default function App() {
               <OrderConfirmation
                 lastSubmittedOrder={lastSubmittedOrder}
                 shopGcash={shopGcash}
+                shopGcashName={shopGcashName}
                 onNavigate={handleNavigate}
               />
             </motion.div>
@@ -953,6 +1014,10 @@ export default function App() {
         shopEmail={shopEmail}
         shopPhone={shopPhone}
         shopFacebook={shopFacebook}
+        shopName={shopName}
+        shopAddress={shopAddress}
+        shopTagline={shopTagline}
+        shopInstagram={shopInstagram}
       />
 
       {/* Toast Notification */}

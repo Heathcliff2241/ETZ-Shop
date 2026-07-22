@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Edit2, Trash2, CheckCircle, XCircle, Package,
   ShoppingCart, Save, RefreshCw, LogOut, Loader2, AlertCircle,
-  ChevronDown, Settings
+  ChevronDown, Settings, TrendingUp, DollarSign, Calendar,
+  Award, ShoppingBag, Filter, Lock
 } from 'lucide-react';
 import { Product, Order, Category, ConditionGrade } from '../types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ---  Types 
 
 interface AdminPanelProps {
   token: string;
@@ -27,7 +28,7 @@ interface AdminPanelProps {
   showConfirmDialog?: (message: string, onConfirm: () => void) => void;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ---  Helpers 
 
 function authHeaders(token: string) {
   return {
@@ -43,14 +44,33 @@ const STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   shipped:   'bg-purple-50 text-purple-700 border-purple-200',
   delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  picked_up: 'bg-teal-50 text-teal-700 border-teal-200',
   cancelled: 'bg-red-50 text-red-700 border-red-200',
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const PAYMENT_STATUS_COLORS: Record<string, string> = {
+  unpaid:        'bg-amber-50 text-amber-700 border-amber-200',
+  gcash_pending: 'bg-blue-50 text-blue-700 border-blue-200',
+  paid:          'bg-emerald-50 text-emerald-700 border-emerald-200',
+  refunded:      'bg-gray-50 text-gray-700 border-gray-200',
+};
+
+// ---  Component 
 
 export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'settings'>('products');
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  // Orders sub-tab and update loading states
+  const [orderSubTab, setOrderSubTab] = useState<'active' | 'history' | 'sales_log'>('active');
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [updatingPaymentOrderId, setUpdatingPaymentOrderId] = useState<string | null>(null);
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+
+  // Sales Dashboard Filters
+  const [salesPeriodFilter, setSalesPeriodFilter] = useState<'all' | 'today' | 'month'>('all');
+  const [salesPaymentFilter, setSalesPaymentFilter] = useState<'completed' | 'paid_only' | 'all'>('completed');
+  const [salesSearchQuery, setSalesSearchQuery] = useState('');
 
   // Dynamic admin credentials state
   const [adminEmail, setAdminEmail] = useState('');
@@ -58,10 +78,16 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
-  // Shop contact credentials state
+  // Essential Store & Owner Information state
+  const [shopName, setShopName] = useState('ETZ A SHOPPE');
+  const [ownerName, setOwnerName] = useState('Cesar Esmero');
+  const [shopTagline, setShopTagline] = useState('Curated Thrift & Vintage Marketplace');
+  const [shopAddress, setShopAddress] = useState('Tagbilaran City, Bohol, Philippines');
   const [localShopEmail, setLocalShopEmail] = useState('cesaresmero2@gmail.com');
   const [localShopPhone, setLocalShopPhone] = useState('+63 912 345 6789');
   const [localShopFacebook, setLocalShopFacebook] = useState('https://www.facebook.com/profile.php?id=100064749982511');
+  const [shopInstagram, setShopInstagram] = useState('https://instagram.com/etzashoppe');
+  const [shopGcashName, setShopGcashName] = useState('Cesar E.');
   const [localShopGcash, setLocalShopGcash] = useState('0912 345 6789');
 
   const fetchAdminSettings = useCallback(async () => {
@@ -75,6 +101,16 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
         const data = await res.json();
         setAdminEmail(data.adminEmail || '');
         setNotificationEmail(data.notificationEmail || '');
+        if (data.shopName) setShopName(data.shopName);
+        if (data.ownerName) setOwnerName(data.ownerName);
+        if (data.shopTagline) setShopTagline(data.shopTagline);
+        if (data.shopAddress) setShopAddress(data.shopAddress);
+        if (data.shopEmail) setLocalShopEmail(data.shopEmail);
+        if (data.shopPhone) setLocalShopPhone(data.shopPhone);
+        if (data.shopFacebook) setLocalShopFacebook(data.shopFacebook);
+        if (data.shopInstagram) setShopInstagram(data.shopInstagram);
+        if (data.shopGcashName) setShopGcashName(data.shopGcashName);
+        if (data.shopGcash) setLocalShopGcash(data.shopGcash);
       }
     } catch (err) {
       console.error('[settings] Failed to fetch settings:', err);
@@ -89,10 +125,16 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        setLocalShopEmail(parsed.email || 'cesaresmero2@gmail.com');
-        setLocalShopPhone(parsed.phone || '+63 912 345 6789');
-        setLocalShopFacebook(parsed.facebook || 'https://www.facebook.com/profile.php?id=100064749982511');
-        setLocalShopGcash(parsed.gcash || '0912 345 6789');
+        if (parsed.shopName) setShopName(parsed.shopName);
+        if (parsed.ownerName) setOwnerName(parsed.ownerName);
+        if (parsed.shopTagline) setShopTagline(parsed.shopTagline);
+        if (parsed.shopAddress) setShopAddress(parsed.shopAddress);
+        if (parsed.email || parsed.shopEmail) setLocalShopEmail(parsed.email || parsed.shopEmail);
+        if (parsed.phone || parsed.shopPhone) setLocalShopPhone(parsed.phone || parsed.shopPhone);
+        if (parsed.facebook || parsed.shopFacebook) setLocalShopFacebook(parsed.facebook || parsed.shopFacebook);
+        if (parsed.instagram || parsed.shopInstagram) setShopInstagram(parsed.instagram || parsed.shopInstagram);
+        if (parsed.gcashName || parsed.shopGcashName) setShopGcashName(parsed.gcashName || parsed.shopGcashName);
+        if (parsed.gcash || parsed.shopGcash) setLocalShopGcash(parsed.gcash || parsed.shopGcash);
       } catch (e) {
         console.error('Failed to parse etz_settings', e);
       }
@@ -115,14 +157,26 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
 
     setSettingsSaving(true);
     try {
+      const payload = {
+        adminEmail: adminEmail.trim(),
+        notificationEmail: notificationEmail.trim(),
+        shopName: shopName.trim(),
+        ownerName: ownerName.trim(),
+        shopTagline: shopTagline.trim(),
+        shopAddress: shopAddress.trim(),
+        shopEmail: localShopEmail.trim(),
+        shopPhone: localShopPhone.trim(),
+        shopFacebook: localShopFacebook.trim(),
+        shopInstagram: shopInstagram.trim(),
+        shopGcashName: shopGcashName.trim(),
+        shopGcash: localShopGcash.trim(),
+      };
+
       if (token) {
         const res = await fetch('/api/admin/settings', {
           method: 'PUT',
           headers: authHeaders(token),
-          body: JSON.stringify({
-            adminEmail: adminEmail.trim(),
-            notificationEmail: notificationEmail.trim(),
-          }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -132,15 +186,27 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
 
       // Save public credentials to localStorage and dispatch event for real-time reactivity
       const shopSettings = {
-        email: localShopEmail.trim(),
-        phone: localShopPhone.trim(),
-        facebook: localShopFacebook.trim(),
-        gcash: localShopGcash.trim(),
+        shopName: payload.shopName,
+        ownerName: payload.ownerName,
+        shopTagline: payload.shopTagline,
+        shopAddress: payload.shopAddress,
+        email: payload.shopEmail,
+        shopEmail: payload.shopEmail,
+        phone: payload.shopPhone,
+        shopPhone: payload.shopPhone,
+        facebook: payload.shopFacebook,
+        shopFacebook: payload.shopFacebook,
+        instagram: payload.shopInstagram,
+        shopInstagram: payload.shopInstagram,
+        gcashName: payload.shopGcashName,
+        shopGcashName: payload.shopGcashName,
+        gcash: payload.shopGcash,
+        shopGcash: payload.shopGcash,
       };
       localStorage.setItem('etz_settings', JSON.stringify(shopSettings));
       window.dispatchEvent(new Event('storage'));
 
-      showToast('All settings saved successfully!', 'success');
+      showToast('All owner & store settings saved successfully!', 'success');
     } catch (err: any) {
       showToast(err.message || 'Failed to save settings.', 'error');
     } finally {
@@ -204,13 +270,13 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     }
   };
 
-  // ── Toast helper ────────────────────────────────────────────────────────────
+  // ---  Toast helper 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4500);
   };
 
-  // ── Fetch products ──────────────────────────────────────────────────────────
+  // ---  Fetch products 
   const fetchProducts = useCallback(async (silent = false) => {
     if (!silent) setProductsLoading(true);
     try {
@@ -225,7 +291,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     }
   }, []);
 
-  // ── Fetch orders ────────────────────────────────────────────────────────────
+  // ---  Fetch orders 
   const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setOrdersLoading(true);
     try {
@@ -240,7 +306,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
           if (newOrders.length > 0) {
             playNotificationSound();
             newOrders.forEach(o => {
-              showToast(`🚨 New Order #${o.id.slice(-6).toUpperCase()} received from ${o.customerName}! (₱${o.subtotal.toLocaleString()})`, 'success');
+              showToast(`ðŸš¨ New Order #${o.id.slice(-6).toUpperCase()} received from ${o.customerName}! (₱${o.subtotal.toLocaleString()})`, 'success');
             });
           }
         }
@@ -269,7 +335,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     return () => clearInterval(timer);
   }, [fetchProducts, fetchOrders]);
 
-  // ── Form reset ──────────────────────────────────────────────────────────────
+  // ---  Form reset 
   const resetForm = () => {
     setName(''); setPrice(0); setCategory('mens'); setSize('');
     setCondition('Gently Loved'); setConditionNote(''); setImageUrl('');
@@ -313,7 +379,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     return uploadedUrls;
   }, [selectedFiles, token]);
 
-  // ── Submit product ──────────────────────────────────────────────────────────
+  // ---  Submit product 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || price <= 0 || !size || !conditionNote || !description) {
@@ -351,7 +417,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     }
   };
 
-  // ── Delete product ──────────────────────────────────────────────────────────
+  // ---  Delete product 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this product permanently?')) return;
     try {
@@ -364,7 +430,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     }
   };
 
-  // ── Toggle sold ─────────────────────────────────────────────────────────────
+  // ---  Toggle sold 
   const handleToggleSold = async (p: Product) => {
     try {
       const res = await fetch(`/api/products/${p.id}`, {
@@ -379,8 +445,9 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     }
   };
 
-  // ── Update order status ─────────────────────────────────────────────────────
+  // ---  Update order status 
   const handleStatusChange = async (orderId: string, status: string) => {
+    setUpdatingOrderId(orderId);
     try {
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ status }),
@@ -390,17 +457,36 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as Order['status'] } : o));
     } catch {
       showToast('Failed to update order status.', 'error');
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-  return (
-    <div className="min-h-screen bg-[#fafaf8]">
+  // ---  Update payment status 
+  const handlePaymentStatusChange = async (orderId: string, paymentStatus: string) => {
+    setUpdatingPaymentOrderId(orderId);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/payment-status`, {
+        method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ paymentStatus }),
+      });
+      if (!res.ok) throw new Error();
+      showToast('Payment status updated.', 'success');
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentStatus: paymentStatus as Order['paymentStatus'] } : o));
+    } catch {
+      showToast('Failed to update payment status.', 'error');
+    } finally {
+      setUpdatingPaymentOrderId(null);
+    }
+  };
 
-      {/* Topbar */}
-      <div className="bg-white border-b border-[#E5E3DE] px-6 py-4 flex items-center justify-between sticky top-0 z-40">
+  // ---  Render 
+  return (
+    <div className="h-screen flex flex-col overflow-hidden bg-[#fafaf8]">
+
+      
+      <div className="bg-white border-b border-[#E5E3DE] px-6 py-3.5 flex items-center justify-between shrink-0 z-40">
         <div>
-          <h1 className="font-heading text-xl font-bold text-[#1C1C1A]">ETZ</h1>
+          <h1 className="font-heading text-xl font-bold text-[#1C1C1A]">ETZ A SHOPPE</h1>
           <p className="text-xs text-[#6B6B65]">Owner Panel</p>
         </div>
         <button
@@ -412,25 +498,89 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
         </button>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex-1 flex flex-col min-h-0 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-hidden">
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: 'Total Products', value: products.length, color: 'text-[#1C1C1A]' },
-            { label: 'Available', value: products.filter(p => !p.isSold).length, color: 'text-[#2D6A4F]' },
-            { label: 'Sold', value: products.filter(p => p.isSold).length, color: 'text-[#D4A853]' },
-            { label: 'Total Orders', value: orders.length, color: 'text-[#1C1C1A]' },
-          ].map(s => (
-            <div key={s.label} className="bg-white border border-[#E5E3DE] rounded-xl p-4">
-              <p className="text-xs text-[#6B6B65] mb-1">{s.label}</p>
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+
+        
+        {(() => {
+          const now = new Date();
+          const todayStr = now.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' });
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+
+          const isFulfilledOrPaid = (o: Order) => {
+            const pStatus = o.paymentStatus || (o.paymentMethod === 'gcash' ? 'gcash_pending' : 'unpaid');
+            return o.status !== 'cancelled' && (pStatus === 'paid' || o.status === 'delivered' || o.status === 'picked_up');
+          };
+
+          const completedOrders = orders.filter(isFulfilledOrPaid);
+
+          const todayOrders = completedOrders.filter(o => {
+            try { return new Date(o.dateCreated).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) === todayStr; }
+            catch { return false; }
+          });
+          const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0);
+
+          const monthOrders = completedOrders.filter(o => {
+            try {
+              const d = new Date(o.dateCreated);
+              return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            } catch { return false; }
+          });
+          const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0);
+
+          const totalRevenue = completedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0);
+          const avgOrderValue = completedOrders.length > 0 ? Math.round(totalRevenue / completedOrders.length) : 0;
+
+          return (
+            <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+              <div className="bg-white border border-[#E5E3DE] rounded-xl p-4 shadow-sm">
+                <p className="text-[10px] font-bold text-[#6B6B65] uppercase tracking-wider mb-1">Products</p>
+                <p className="text-xl font-bold text-[#1C1C1A]">{products.length} <span className="text-xs text-[#2D6A4F] font-normal">({products.filter(p => !p.isSold).length} active)</span></p>
+              </div>
+
+              <div className="bg-white border border-[#E5E3DE] rounded-xl p-4 shadow-sm">
+                <p className="text-[10px] font-bold text-[#6B6B65] uppercase tracking-wider mb-1">Total Orders</p>
+                <p className="text-xl font-bold text-[#1C1C1A]">{orders.length}</p>
+              </div>
+
+              <div className="bg-white border border-[#E5E3DE] rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] font-bold text-[#6B6B65] uppercase tracking-wider">Today's Sales</p>
+                  <DollarSign className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                </div>
+                <p className="text-xl font-bold text-[#2D6A4F]">₱{todayRevenue.toLocaleString()}</p>
+              </div>
+
+              <div className="bg-white border border-[#E5E3DE] rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] font-bold text-[#6B6B65] uppercase tracking-wider">This Month</p>
+                  <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                </div>
+                <p className="text-xl font-bold text-[#1C1C1A]">₱{monthRevenue.toLocaleString()}</p>
+              </div>
+
+              <div className="bg-white border border-[#E5E3DE] rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] font-bold text-[#6B6B65] uppercase tracking-wider">All-Time Revenue</p>
+                  <TrendingUp className="w-3.5 h-3.5 text-purple-600" />
+                </div>
+                <p className="text-xl font-bold text-[#1C1C1A]">₱{totalRevenue.toLocaleString()}</p>
+              </div>
+
+              <div className="bg-white border border-[#E5E3DE] rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] font-bold text-[#6B6B65] uppercase tracking-wider">Avg Order</p>
+                  <Award className="w-3.5 h-3.5 text-amber-600" />
+                </div>
+                <p className="text-xl font-bold text-[#1C1C1A]">₱{avgOrderValue.toLocaleString()}</p>
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })()}
 
-        {/* Tabs */}
-        <div className="flex gap-1 border-b border-[#E5E3DE] mb-8 overflow-x-auto">
+        
+        <div className="shrink-0 flex gap-1 border-b border-[#E5E3DE] mb-6 overflow-x-auto">
           {(['products', 'orders', 'settings'] as const).map(tab => (
             <button
               key={tab}
@@ -443,16 +593,16 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
               id={`admin-tab-${tab}`}
             >
               {tab === 'products' ? <Package className="w-4 h-4" /> : tab === 'orders' ? <ShoppingCart className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
-              {tab === 'products' ? `Products (${products.length})` : tab === 'orders' ? `Orders (${orders.length})` : 'Admin Settings'}
+              {tab === 'products' ? `Products (${products.length})` : tab === 'orders' ? `Orders & Sales Log (${orders.length})` : 'Admin Settings'}
             </button>
           ))}
         </div>
 
-        {/* ── PRODUCTS TAB ── */}
+        
         {activeTab === 'products' && (
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-6 pr-1 sm:pr-2 pb-6">
 
-            {/* Add / Edit Form */}
+            
             {isAdding ? (
               <div className="bg-white border border-[#E5E3DE] rounded-2xl p-6">
                 <h2 className="font-heading text-lg font-bold text-[#1C1C1A] mb-5">
@@ -560,7 +710,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
               </button>
             )}
 
-            {/* Product List */}
+            
             {productsLoading ? (
               <div className="flex items-center justify-center py-16 text-[#6B6B65]">
                 <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading products…
@@ -632,101 +782,360 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
           </div>
         )}
 
-        {/* ── ORDERS TAB ── */}
-        {activeTab === 'orders' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-heading text-lg font-bold text-[#1C1C1A]">Orders</h2>
-              <button onClick={fetchOrders} disabled={ordersLoading}
-                className="flex items-center gap-1.5 text-xs text-[#6B6B65] hover:text-[#1C1C1A] transition-colors cursor-pointer bg-transparent border-none">
-                <RefreshCw className={`w-3.5 h-3.5 ${ordersLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-            </div>
+        
+        {activeTab === 'orders' && (() => {
+          const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'shipped');
+          const historyOrders = orders.filter(o => o.status === 'delivered' || o.status === 'picked_up' || o.status === 'cancelled');
+          const targetOrders = orderSubTab === 'active' ? activeOrders : historyOrders;
 
-            {ordersLoading ? (
-              <div className="flex items-center justify-center py-16 text-[#6B6B65]">
-                <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading orders…
+          const filteredOrders = targetOrders.filter(o => {
+            if (!orderSearchQuery.trim()) return true;
+            const q = orderSearchQuery.toLowerCase().trim();
+            return (
+              o.id.toLowerCase().includes(q) ||
+              (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+              (o.customerPhone && o.customerPhone.toLowerCase().includes(q)) ||
+              (o.customerEmail && o.customerEmail.toLowerCase().includes(q))
+            );
+          });
+
+          return (
+            <div className="flex-1 overflow-y-auto min-h-0 space-y-6 pr-1 sm:pr-2 pb-6">
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5E3DE] pb-4">
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setOrderSubTab('active')}
+                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors cursor-pointer border ${
+                      orderSubTab === 'active'
+                        ? 'bg-[#2D6A4F] text-white border-[#2D6A4F]'
+                        : 'bg-white text-[#6B6B65] border-[#E5E3DE] hover:text-[#1C1C1A]'
+                    }`}
+                  >
+                    Active Orders ({activeOrders.length})
+                  </button>
+
+                  <button
+                    onClick={() => setOrderSubTab('history')}
+                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors cursor-pointer border ${
+                      orderSubTab === 'history'
+                        ? 'bg-[#1C1C1A] text-white border-[#1C1C1A]'
+                        : 'bg-white text-[#6B6B65] border-[#E5E3DE] hover:text-[#1C1C1A]'
+                    }`}
+                  >
+                    Order History ({historyOrders.length})
+                  </button>
+
+                  <button
+                    onClick={() => setOrderSubTab('sales_log')}
+                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors cursor-pointer border flex items-center gap-1.5 ${
+                      orderSubTab === 'sales_log'
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-[#6B6B65] border-[#E5E3DE] hover:text-[#1C1C1A]'
+                    }`}
+                  >
+                    <TrendingUp className="w-3 h-3" />
+                    Sales Log
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  
+                  <input
+                    type="text"
+                    value={orderSearchQuery}
+                    onChange={e => setOrderSearchQuery(e.target.value)}
+                    placeholder="Search by Order ID, name, or phone..."
+                    className="px-3 py-1.5 text-xs bg-white border border-[#E5E3DE] rounded-xl text-[#1C1C1A] placeholder-[#9B9B93] focus:outline-none focus:border-[#2D6A4F] w-full sm:w-64"
+                  />
+
+                  
+                  <button
+                    onClick={fetchOrders}
+                    disabled={ordersLoading}
+                    className="flex items-center gap-1.5 text-xs text-[#6B6B65] hover:text-[#1C1C1A] transition-colors cursor-pointer bg-transparent border-none shrink-0"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${ordersLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                </div>
               </div>
-            ) : orders.length === 0 ? (
-              <div className="text-center py-16 text-[#6B6B65]">
-                <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>No orders yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {orders.map(order => (
-                  <div key={order.id} className="bg-white border border-[#E5E3DE] rounded-2xl p-5">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono font-bold text-[#1C1C1A] text-sm">{order.id}</span>
-                          <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${STATUS_COLORS[order.status]}`}>
-                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#6B6B65]">{order.dateCreated}</p>
+
+              {ordersLoading ? (
+                <div className="flex items-center justify-center py-16 text-[#6B6B65]">
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading orders...
+                </div>
+              ) : orderSubTab === 'sales_log' ? (() => {
+                const now = new Date();
+                const todayStr = now.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' });
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+
+                const isFulfilledOrPaid = (o: Order) => {
+                  const ps = o.paymentStatus || 'unpaid';
+                  return o.status !== 'cancelled' && (ps === 'paid' || o.status === 'delivered' || o.status === 'picked_up');
+                };
+
+                const salesLog = orders.filter(o => {
+                  if (o.status === 'cancelled') return false;
+                  if (salesPaymentFilter === 'completed' && !isFulfilledOrPaid(o)) return false;
+                  if (salesPaymentFilter === 'paid_only' && (o.paymentStatus || 'unpaid') !== 'paid') return false;
+                  if (salesPeriodFilter === 'today') {
+                    try { if (new Date(o.dateCreated).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) !== todayStr) return false; }
+                    catch { return false; }
+                  } else if (salesPeriodFilter === 'month') {
+                    try { const d = new Date(o.dateCreated); if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return false; }
+                    catch { return false; }
+                  }
+                  if (salesSearchQuery.trim()) {
+                    const q = salesSearchQuery.toLowerCase().trim();
+                    if (!o.id.toLowerCase().includes(q) && !o.customerName.toLowerCase().includes(q) && !o.customerPhone.toLowerCase().includes(q) && !o.items.some(i => i.productName.toLowerCase().includes(q))) return false;
+                  }
+                  return true;
+                });
+
+                const filteredRevenue = salesLog.reduce((s, o) => s + (o.subtotal || 0), 0);
+
+                return (
+                  <div className="space-y-4">
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-[#F7F6F2] border border-[#E5E3DE] rounded-2xl p-4">
+                      <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-[#E5E3DE]">
+                        {(['all', 'today', 'month'] as const).map(period => (
+                          <button key={period} onClick={() => setSalesPeriodFilter(period)}
+                            className={`px-3 py-1 text-xs font-semibold rounded-lg capitalize transition-all cursor-pointer border-none ${
+                              salesPeriodFilter === period ? 'bg-[#2D6A4F] text-white' : 'text-[#6B6B65] hover:text-[#1C1C1A] bg-transparent'
+                            }`}>
+                            {period === 'all' ? 'All Time' : period === 'today' ? 'Today' : 'This Month'}
+                          </button>
+                        ))}
                       </div>
-
-                      {/* Status Selector */}
                       <div className="relative">
-                        <select
-                          value={order.status}
-                          onChange={e => handleStatusChange(order.id, e.target.value)}
-                          className="appearance-none pr-7 pl-3 py-1.5 text-xs font-medium border border-[#E5E3DE] rounded-lg bg-[#F7F6F2] text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F] cursor-pointer"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
+                        <select value={salesPaymentFilter} onChange={e => setSalesPaymentFilter(e.target.value as 'completed' | 'paid_only' | 'all')}
+                          className="appearance-none pr-7 pl-3 py-1.5 text-xs font-medium border border-[#E5E3DE] rounded-xl bg-white text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F] cursor-pointer">
+                          <option value="completed">Paid & Completed</option>
+                          <option value="paid_only">Verified Paid Only</option>
+                          <option value="all">All Non-Cancelled</option>
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#6B6B65] pointer-events-none" />
                       </div>
+                      <input type="text" value={salesSearchQuery} onChange={e => setSalesSearchQuery(e.target.value)} placeholder="Search transactions..."
+                        className="px-3 py-1.5 text-xs bg-white border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F] w-full sm:w-48" />
+                      <span className="ml-auto text-xs text-[#6B6B65]">Total: <strong className="text-[#2D6A4F] font-mono">₱{filteredRevenue.toLocaleString()}</strong> ({salesLog.length} tx)</span>
                     </div>
 
-                    {/* Customer Info */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 bg-[#F7F6F2] rounded-xl p-3">
-                      <div>
-                        <p className="text-xs text-[#6B6B65]">Customer</p>
-                        <p className="text-sm font-medium text-[#1C1C1A]">{order.customerName}</p>
+                    {salesLog.length === 0 ? (
+                      <div className="text-center py-16 text-[#6B6B65] bg-white border border-[#E5E3DE] rounded-2xl">
+                        <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                        <p className="font-medium">No matching sales records found.</p>
                       </div>
-                      <div>
-                        <p className="text-xs text-[#6B6B65]">Contact</p>
-                        <p className="text-sm text-[#1C1C1A]">{order.customerPhone}</p>
-                        <p className="text-xs text-[#6B6B65]">{order.customerEmail}</p>
+                    ) : (
+                      <div className="bg-white border border-[#E5E3DE] rounded-2xl overflow-x-auto shadow-sm">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-[#E5E3DE] bg-[#F7F6F2] text-[#6B6B65] uppercase tracking-wider font-mono">
+                              <th className="py-3 px-4">Date</th>
+                              <th className="py-3 px-4">Order ID</th>
+                              <th className="py-3 px-4">Customer</th>
+                              <th className="py-3 px-4">Items</th>
+                              <th className="py-3 px-4">Payment</th>
+                              <th className="py-3 px-4">Payment Status</th>
+                              <th className="py-3 px-4">Fulfillment</th>
+                              <th className="py-3 px-4 text-right">Revenue (₱)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#E5E3DE]">
+                            {salesLog.map(order => {
+                              const ps = order.paymentStatus || 'unpaid';
+                              const psLabel: Record<string, string> = { unpaid: 'UNPAID', gcash_pending: 'GCash Pending', paid: 'PAID', refunded: 'REFUNDED' };
+                              return (
+                                <tr key={order.id} className="hover:bg-[#FAF9F5] transition-colors">
+                                  <td className="py-3 px-4 text-[#6B6B65] whitespace-nowrap">{order.dateCreated}</td>
+                                  <td className="py-3 px-4 font-mono font-bold text-[#1C1C1A]">{order.id}</td>
+                                  <td className="py-3 px-4">
+                                    <span className="font-semibold text-[#1C1C1A] block">{order.customerName}</span>
+                                    <span className="text-[10px] text-[#6B6B65]">{order.customerPhone}</span>
+                                  </td>
+                                  <td className="py-3 px-4 text-[#1C1C1A] max-w-[180px] truncate">
+                                    {(Array.isArray(order.items) ? order.items : []).map(i => i.productName).join(', ')}
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                                      order.paymentMethod === 'gcash' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'
+                                    }`}>{order.paymentMethod === 'gcash' ? 'GCash' : 'Cash'}</span>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold border ${PAYMENT_STATUS_COLORS[ps] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                                      {psLabel[ps] || ps.toUpperCase()}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold border ${STATUS_COLORS[order.status] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                                      {order.status === 'picked_up' ? 'Picked Up' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4 text-right font-bold font-mono text-[#2D6A4F] text-sm">₱{(order.subtotal || 0).toLocaleString()}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
-                      <div>
-                        <p className="text-xs text-[#6B6B65]">Delivery</p>
-                        <p className="text-sm text-[#1C1C1A] capitalize">{order.deliveryMethod}</p>
-                        {order.deliveryAddress && <p className="text-xs text-[#6B6B65]">{order.deliveryAddress}</p>}
-                      </div>
-                    </div>
-
-                    {/* Items */}
-                    <div className="space-y-2">
-                      {(Array.isArray(order.items) ? order.items : []).map((item: { productId: string; productName: string; price: number; size: string }, i: number) => (
-                        <div key={i} className="flex items-center justify-between text-sm">
-                          <span className="text-[#1C1C1A]">{item.productName} <span className="text-[#9B9B93]">({item.size})</span></span>
-                          <span className="font-semibold text-[#1C1C1A]">₱{item.price.toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="border-t border-[#E5E3DE] mt-3 pt-3 flex justify-between items-center">
-                      <span className="text-xs text-[#6B6B65]">{order.note ? `Note: ${order.note}` : ''}</span>
-                      <span className="font-bold text-[#1C1C1A]">Total: ₱{order.subtotal.toLocaleString()}</span>
-                    </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                );
+              })() : filteredOrders.length === 0 ? (
+                <div className="text-center py-16 text-[#6B6B65] bg-white border border-[#E5E3DE] rounded-2xl">
+                  <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">
+                    {orderSearchQuery
+                      ? 'No matching orders found.'
+                      : orderSubTab === 'active'
+                      ? 'No active orders in progress.'
+                      : 'No completed or cancelled orders in history.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredOrders.map(order => {
+                    const isUpdating = updatingOrderId === order.id;
+                    const isUpdatingPayment = updatingPaymentOrderId === order.id;
 
-        {/* Settings Tab */}
+                    const paymentMethodLabel = order.paymentMethod === 'gcash' ? 'GCash' : 'Cash';
+                    const paymentStatusLabel = {
+                      unpaid: 'Unpaid',
+                      gcash_pending: 'GCash Pending',
+                      paid: 'Paid',
+                      refunded: 'Refunded'
+                    }[order.paymentStatus] || 'Unpaid';
+
+                    return (
+                      <div key={order.id} className="bg-white border border-[#E5E3DE] rounded-2xl p-5 shadow-sm space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-[#E5E3DE] pb-4">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className="font-mono font-bold text-[#1C1C1A] text-sm">{order.id}</span>
+                              
+                              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${STATUS_COLORS[order.status] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                                {order.status === 'picked_up' ? 'Picked Up' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              </span>
+                              
+                              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                                order.paymentMethod === 'gcash' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200'
+                              }`}>
+                                {paymentMethodLabel}
+                              </span>
+                              
+                              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${PAYMENT_STATUS_COLORS[order.paymentStatus] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                                {paymentStatusLabel}
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#6B6B65]">{order.dateCreated}</p>
+                          </div>
+
+                          
+                          {orderSubTab === 'history' ? (
+                            <div className="flex items-center gap-1.5 text-xs text-[#6B6B65] bg-[#F7F6F2] px-3 py-1.5 rounded-xl border border-[#E5E3DE]">
+                              <Lock className="w-3.5 h-3.5 text-[#9B9B93]" />
+                              <span className="font-semibold text-[#1C1C1A]">Completed / Archived (Read-Only)</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-3">
+                              
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-[#6B6B65]">Payment:</span>
+                                {isUpdatingPayment && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2D6A4F]" />}
+                                <div className="relative">
+                                  <select
+                                    value={order.paymentStatus}
+                                    disabled={isUpdatingPayment}
+                                    onChange={e => handlePaymentStatusChange(order.id, e.target.value)}
+                                    className={`appearance-none pr-7 pl-3 py-1.5 text-xs font-medium border rounded-lg bg-[#F7F6F2] text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F] cursor-pointer transition-all ${
+                                      isUpdatingPayment ? 'opacity-50 cursor-not-allowed border-[#2D6A4F]' : 'border-[#E5E3DE]'
+                                    }`}
+                                  >
+                                    <option value="unpaid">Unpaid</option>
+                                    <option value="gcash_pending">GCash Pending</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="refunded">Refunded</option>
+                                  </select>
+                                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#6B6B65] pointer-events-none" />
+                                </div>
+                              </div>
+
+                              
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-[#6B6B65]">Order:</span>
+                                {isUpdating && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2D6A4F]" />}
+                                <div className="relative">
+                                  <select
+                                    value={order.status}
+                                    disabled={isUpdating}
+                                    onChange={e => handleStatusChange(order.id, e.target.value)}
+                                    className={`appearance-none pr-7 pl-3 py-1.5 text-xs font-medium border rounded-lg bg-[#F7F6F2] text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F] cursor-pointer transition-all ${
+                                      isUpdating ? 'opacity-50 cursor-not-allowed border-[#2D6A4F]' : 'border-[#E5E3DE]'
+                                    }`}
+                                  >
+                                    <option value="pending">Pending</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="shipped">Shipped</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="picked_up">Picked Up</option>
+                                    <option value="cancelled">Cancelled</option>
+                                  </select>
+                                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#6B6B65] pointer-events-none" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 bg-[#F7F6F2] rounded-xl p-3">
+                          <div>
+                            <p className="text-xs text-[#6B6B65]">Customer</p>
+                            <p className="text-sm font-medium text-[#1C1C1A]">{order.customerName}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-[#6B6B65]">Contact</p>
+                            <p className="text-sm text-[#1C1C1A]">{order.customerPhone}</p>
+                            <p className="text-xs text-[#6B6B65]">{order.customerEmail}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-[#6B6B65]">Fulfillment</p>
+                            <p className="text-sm text-[#1C1C1A] capitalize font-medium">{order.deliveryMethod}</p>
+                            {order.deliveryAddress && <p className="text-xs text-[#6B6B65]">{order.deliveryAddress}</p>}
+                          </div>
+                        </div>
+
+                        
+                        <div className="space-y-2">
+                          {(Array.isArray(order.items) ? order.items : []).map((item: { productId: string; productName: string; price: number; size: string }, i: number) => (
+                            <div key={i} className="flex items-center justify-between text-sm">
+                              <span className="text-[#1C1C1A]">{item.productName} <span className="text-[#9B9B93]">({item.size})</span></span>
+                              <span className="font-semibold text-[#1C1C1A]">₱{item.price.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="border-t border-[#E5E3DE] mt-3 pt-3 flex justify-between items-center">
+                          <span className="text-xs text-[#6B6B65]">{order.note ? `Note: ${order.note}` : ''}</span>
+                          <span className="font-bold text-[#1C1C1A]">Total: ₱{order.subtotal.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+
+        
         {activeTab === 'settings' && (
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-6 pr-1 sm:pr-2 pb-6">
             <div className="bg-white border border-[#E5E3DE] rounded-2xl p-6">
               <div className="border-b border-[#F0EEE8] pb-4 mb-6">
                 <h2 className="font-heading text-lg font-bold text-[#1C1C1A]">Owner Settings</h2>
@@ -739,8 +1148,69 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
                 </div>
               ) : (
                 <form onSubmit={handleSaveSettings} className="space-y-6">
-                  {/* Section A: Security & Access */}
+                  
                   <div className="space-y-4">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#9B9B93]">Store & Owner Identity</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">
+                          Store Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={shopName}
+                          onChange={e => setShopName(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="ETZ A SHOPPE"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">
+                          Owner / Client Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={ownerName}
+                          onChange={e => setOwnerName(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="Cesar Esmero"
+                        />
+                      </div>
+
+                      <div className="space-y-1 md:col-span-2">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">
+                          Store Tagline / Bio
+                        </label>
+                        <input
+                          type="text"
+                          value={shopTagline}
+                          onChange={e => setShopTagline(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="Curated Thrift & Vintage Marketplace"
+                        />
+                      </div>
+
+                      <div className="space-y-1 md:col-span-2">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">
+                          Store / Pickup Address
+                        </label>
+                        <input
+                          type="text"
+                          value={shopAddress}
+                          onChange={e => setShopAddress(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="Tagbilaran City, Bohol, Philippines"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  
+                  <div className="space-y-4 pt-4 border-t border-[#F0EEE8]">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-[#9B9B93]">Security & Access Credentials</h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -776,9 +1246,9 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
                     </div>
                   </div>
 
-                  {/* Section B: Public Store Contact Info */}
+                  
                   <div className="space-y-4 pt-4 border-t border-[#F0EEE8]">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#9B9B93]">Public Shop Information</h3>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#9B9B93]">Public Shop Information & Channels</h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
@@ -815,6 +1285,35 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
                       </div>
 
                       <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">Instagram Handle / URL</label>
+                        <input
+                          type="text"
+                          value={shopInstagram}
+                          onChange={e => setShopInstagram(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="https://instagram.com/..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  
+                  <div className="space-y-4 pt-4 border-t border-[#F0EEE8]">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#9B9B93]">GCash & Payment Credentials</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">GCash Account Name</label>
+                        <input
+                          type="text"
+                          value={shopGcashName}
+                          onChange={e => setShopGcashName(e.target.value)}
+                          className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                          placeholder="Cesar E."
+                        />
+                      </div>
+
+                      <div className="space-y-1">
                         <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">GCash Number for Checkout</label>
                         <input
                           type="text"
@@ -844,7 +1343,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
         )}
       </div>
 
-      {/* Toast */}
+      
       {toast && (
         <div className={`fixed bottom-6 right-6 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm z-50 ${
           toast.type === 'success' ? 'bg-white border-[#2D6A4F]/20 text-[#1C1C1A]' : 'bg-white border-red-200 text-red-700'
