@@ -1,10 +1,34 @@
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import dotenv from 'dotenv';
 import { adminConfig } from './adminConfig.js';
 dotenv.config();
 
 let sqlInstance: any = null;
 let dbError: Error | null = null;
+
+try {
+  if (process.env.DATABASE_URL) {
+    const client = postgres(process.env.DATABASE_URL, {
+      max: 1,           // critical for serverless — avoid connection pool exhaustion
+      ssl: 'require',
+      idle_timeout: 20,
+      connect_timeout: 10,
+    });
+
+    // Wrap as tagged template literal so all existing sql`...` calls work unchanged
+    const wrapper = (strings: TemplateStringsArray, ...values: any[]) => {
+      return client(strings, ...values);
+    };
+    wrapper.query = async (queryText: string, params?: any[]) => {
+      return client.unsafe(queryText, params || []);
+    };
+    sqlInstance = wrapper;
+  } else {
+    dbError = new Error('DATABASE_URL environment variable is not set.');
+  }
+} catch (error) {
+  dbError = error instanceof Error ? error : new Error(String(error));
+}
 
 const fallbackProducts = [
   {
@@ -44,23 +68,6 @@ const fallbackProducts = [
     date_added: '2026-07-01'
   }
 ];
-
-try {
-  if (process.env.DATABASE_URL) {
-    const neonClient = neon(process.env.DATABASE_URL);
-    const wrapper = (strings: any, ...values: any[]) => {
-      return (neonClient as any)(strings, ...values);
-    };
-    wrapper.query = async (queryText: string, params?: any[]) => {
-      return (neonClient as any).query(queryText, params || []);
-    };
-    sqlInstance = wrapper;
-  } else {
-    dbError = new Error('DATABASE_URL environment variable is not set.');
-  }
-} catch (error) {
-  dbError = error instanceof Error ? error : new Error(String(error));
-}
 
 // Check database availability
 export function isDbAvailable() {
