@@ -9,7 +9,7 @@ import { useApp } from '../../providers/AppProvider';
 
 export default function OrderConfirmationPage() {
   const router = useRouter();
-  const { orders } = useApp();
+  const { orders, settings } = useApp();
   const lastOrder = orders[0] || null;
 
   return (
@@ -17,7 +17,9 @@ export default function OrderConfirmationPage() {
       <Header currentPage="order-confirmation" />
       <main className="flex-grow pt-20 sm:pt-24 px-4 sm:px-6 max-w-3xl mx-auto w-full pb-16">
         <OrderConfirmation
-          order={lastOrder}
+          lastSubmittedOrder={lastOrder}
+          shopGcash={settings.shopGcash}
+          shopGcashName={settings.shopGcashName}
           onNavigate={(page) => router.push(`/${page}`)}
         />
       </main>
@@ -25,3 +27,4 @@ export default function OrderConfirmationPage() {
     </div>
   );
 }
+

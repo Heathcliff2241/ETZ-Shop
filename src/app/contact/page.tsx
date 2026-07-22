@@ -16,7 +16,7 @@ export default function ContactPage() {
   const [contactMsgText, setContactMsgText] = useState('');
   const [contactSubmitted, setContactSubmitted] = useState(false);
 
-  const handleSubmitContact = (e: React.FormEvent) => {
+  const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName || !contactEmail || !contactMsgText) return;
 
@@ -42,9 +42,11 @@ export default function ContactPage() {
         <Contact
           shopPhone={settings.shopPhone}
           shopEmail={settings.shopEmail}
-          shopAddress={settings.shopAddress}
           shopFacebook={settings.shopFacebook}
-          shopInstagram={settings.shopInstagram}
+          shopGcash={settings.shopGcash}
+          shopGcashName={settings.shopGcashName}
+          shopAddress={settings.shopAddress}
+          ownerName={settings.ownerName}
           contactName={contactName}
           setContactName={setContactName}
           contactEmail={contactEmail}
@@ -52,7 +54,7 @@ export default function ContactPage() {
           contactMsgText={contactMsgText}
           setContactMsgText={setContactMsgText}
           contactSubmitted={contactSubmitted}
-          onSubmitContact={handleSubmitContact}
+          handleContactSubmit={handleContactSubmit}
           onNavigate={(page) => router.push(`/${page}`)}
         />
       </main>
@@ -60,3 +62,4 @@ export default function ContactPage() {
     </div>
   );
 }
+

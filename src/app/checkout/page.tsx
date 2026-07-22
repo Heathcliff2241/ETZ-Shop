@@ -9,7 +9,7 @@ import { useApp } from '../../providers/AppProvider';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, clearCart, addOrder, products, setProducts } = useApp();
+  const { cart, clearCart, addOrder, products, setProducts, settings } = useApp();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -108,8 +108,10 @@ export default function CheckoutPage() {
           setNote={setNote}
           paymentMethod={paymentMethod}
           setPaymentMethod={setPaymentMethod}
+          shopGcash={settings.shopGcash}
+          shopGcashName={settings.shopGcashName}
           isOrdering={isOrdering}
-          onSubmitOrder={handlePlaceOrder}
+          handlePlaceOrder={handlePlaceOrder}
           onNavigate={(page) => router.push(`/${page}`)}
         />
       </main>
