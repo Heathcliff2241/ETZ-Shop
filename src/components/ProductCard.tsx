@@ -48,7 +48,12 @@ export default function ProductCard({ product, onClick, isSaved = false, onToggl
   const categoryLabel = product.category === 'mens' ? "Men's"
     : product.category === 'womens' ? "Women's"
     : product.category === 'kids' ? 'Kids'
-    : 'Accessories';
+    : product.category === 'accessories' ? 'Accessories'
+    : product.category === 'jewelry' ? 'Jewelry'
+    : product.category === 'perfumes' ? 'Perfumes'
+    : 'Others';
+
+  const hasMultipleImages = product.images && product.images.length > 1;
 
   return (
     <motion.div
@@ -64,20 +69,33 @@ export default function ProductCard({ product, onClick, isSaved = false, onToggl
     >
       {/* Inner Core */}
       <div className="bg-white rounded-[calc(1.25rem-0.25rem)] sm:rounded-[calc(2rem-0.375rem)] overflow-hidden border border-border/10 flex flex-col h-full flex-grow">
-        {/* Product Image */}
+        {/* Product Image Container */}
         <div 
           className="relative aspect-[4/5] bg-surface-tint overflow-hidden shrink-0 cursor-zoom-in"
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         >
+          {/* Main Primary Image */}
           <img
             src={product.images[0] || 'https://picsum.photos/seed/vintage/400/500'}
             alt={product.name}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-opacity duration-500 ${hasMultipleImages ? 'group-hover:opacity-0' : ''}`}
             style={zoomStyle}
             referrerPolicy="no-referrer"
             loading="lazy"
           />
+
+          {/* Secondary Shot Hover Image */}
+          {hasMultipleImages && (
+            <img
+              src={product.images[1]}
+              alt={`${product.name} - Angle 2`}
+              className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              style={zoomStyle}
+              referrerPolicy="no-referrer"
+              loading="lazy"
+            />
+          )}
 
           {/* Condition Badge */}
           <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10">
@@ -85,6 +103,15 @@ export default function ProductCard({ product, onClick, isSaved = false, onToggl
               {product.condition}
             </span>
           </div>
+
+          {/* Multiple Shots Badge */}
+          {hasMultipleImages && (
+            <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 z-10 pointer-events-none">
+              <span className="text-[8px] sm:text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-xs flex items-center gap-1">
+                📷 {product.images.length} shots
+              </span>
+            </div>
+          )}
 
           {/* Wishlist Toggle */}
           {onToggleSave && (
@@ -107,6 +134,7 @@ export default function ProductCard({ product, onClick, isSaved = false, onToggl
             </div>
           )}
         </div>
+
 
         {/* Product Info */}
         <div className="p-2.5 sm:p-4 flex flex-col flex-grow justify-between">

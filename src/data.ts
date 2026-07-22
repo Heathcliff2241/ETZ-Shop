@@ -136,5 +136,57 @@ export const DEFAULT_PRODUCTS: Product[] = [
     description: 'A charming, sturdy native straw basket bag hand-woven locally in Cebu. Fully lined with a soft cream canvas lining and a secure zipper closure.',
     isSold: false,
     dateAdded: '2026-06-27'
+  },
+  {
+    id: 'etz-p9',
+    name: 'Handcrafted Vintage Brass & Jade Pendant Ring',
+    price: 390,
+    category: 'jewelry',
+    size: 'Adjustable (Fits US 6-8)',
+    condition: 'Like New',
+    conditionNote: 'Solid brass setting with natural jade stone insert. Polished surface, scratch-free stone.',
+    quantity: 1,
+    images: [
+      'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'A striking bohemian vintage brass ring set with genuine polished green jade. Perfect statement piece with an organic, artisanal feel.',
+    isSold: false,
+    dateAdded: '2026-07-05'
+  },
+  {
+    id: 'etz-p10',
+    name: 'Botanical Sandalwood & Bergamot Eau de Cologne (50ml)',
+    price: 620,
+    category: 'perfumes',
+    size: '50ml (95% full bottle)',
+    condition: 'Like New',
+    conditionNote: 'Original glass bottle & wooden cap intact. Sprayed 3-4 times only. Stored in dark, cool cabinet.',
+    quantity: 1,
+    images: [
+      'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Warm, grounding unisex fragrance featuring top notes of zesty Italian bergamot, heart notes of cedar, and a deep base of Australian sandalwood.',
+    isSold: false,
+    dateAdded: '2026-07-06'
+  },
+  {
+    id: 'etz-p11',
+    name: 'Artisanal Hand-Poured Soy Wax Candle & Brass Tray',
+    price: 340,
+    category: 'others',
+    size: 'Medium (8 oz candle + 6" tray)',
+    condition: 'Like New',
+    conditionNote: 'Brand new, unburned soy candle in amber glass jar with solid hammered brass coaster tray.',
+    quantity: 1,
+    images: [
+      'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&w=600&q=80'
+    ],
+    description: 'Eco-friendly non-toxic soy wax candle infused with lavender and amber essential oils. Comes with a decorative vintage brass tray.',
+    isSold: false,
+    dateAdded: '2026-07-07'
   }
 ];
+

@@ -21,6 +21,15 @@ async function startServer() {
 
   app.use(cors({ origin: true, credentials: true, methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'] }));
   app.use(express.json({ limit: '16mb' }));
+
+  // Serve SEO/AI static files from public/ (robots, sitemap, llms)
+  app.use(express.static(path.join(process.cwd(), 'public'), {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('robots.txt')) res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      if (filePath.endsWith('sitemap.xml')) res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      if (filePath.endsWith('llms.txt')) res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    }
+  }));
   app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
 
   app.options('*', (req, res) => {

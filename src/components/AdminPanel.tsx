@@ -233,6 +233,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const [condition, setCondition] = useState<ConditionGrade>('Gently Loved');
   const [conditionNote, setConditionNote] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imagesList, setImagesList] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [description, setDescription] = useState('');
@@ -339,7 +340,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const resetForm = () => {
     setName(''); setPrice(0); setCategory('mens'); setSize('');
     setCondition('Gently Loved'); setConditionNote(''); setImageUrl('');
-    setSelectedFiles(null); setDescription(''); setIsSold(false);
+    setImagesList([]); setSelectedFiles(null); setDescription(''); setIsSold(false);
     setIsAdding(false); setEditingId(null);
   };
 
@@ -347,37 +348,68 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     setEditingId(p.id); setIsAdding(true);
     setName(p.name); setPrice(p.price); setCategory(p.category);
     setSize(p.size); setCondition(p.condition); setConditionNote(p.conditionNote);
-    setImageUrl(p.images[0] || ''); setDescription(p.description); setIsSold(p.isSold);
+    setImageUrl('');
+    setImagesList(p.images && p.images.length > 0 ? [...p.images] : []);
+    setDescription(p.description); setIsSold(p.isSold);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const uploadSelectedImages = useCallback(async () => {
-    if (!selectedFiles?.length) return [] as string[];
+  const uploadFilesToImagesList = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter((file): file is File => file instanceof File);
+    if (!fileArray.length) return;
 
-    const uploadedUrls: string[] = [];
-    const files = Array.from(selectedFiles).filter((file): file is File => file instanceof File);
+    setUploadingImage(true);
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of fileArray) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('Could not read image file.'));
+          reader.readAsDataURL(file);
+        });
 
-    for (const file of files) {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Could not read image file.'));
-        reader.readAsDataURL(file);
-      });
+        const res = await fetch('/api/products/upload', {
+          method: 'POST',
+          headers: authHeaders(token),
+          body: JSON.stringify({ filename: file.name, contentType: file.type, data: dataUrl }),
+        });
 
-      const res = await fetch('/api/products/upload', {
-        method: 'POST',
-        headers: authHeaders(token),
-        body: JSON.stringify({ filename: file.name, contentType: file.type, data: dataUrl }),
-      });
+        if (!res.ok) throw new Error('Image upload failed');
+        const json = await res.json();
+        uploadedUrls.push(json.url);
+      }
 
-      if (!res.ok) throw new Error('Image upload failed');
-      const json = await res.json();
-      uploadedUrls.push(json.url);
+      setImagesList(prev => [...prev, ...uploadedUrls]);
+      showToast(`Uploaded ${uploadedUrls.length} image shot(s).`, 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Image upload failed.', 'error');
+    } finally {
+      setUploadingImage(false);
     }
+  };
 
-    return uploadedUrls;
-  }, [selectedFiles, token]);
+  const handleAddImageUrl = () => {
+    const trimmed = imageUrl.trim();
+    if (!trimmed) return;
+    setImagesList(prev => [...prev, trimmed]);
+    setImageUrl('');
+    showToast('Image URL added to shots.', 'success');
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImagesList(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMakeMainPhoto = (index: number) => {
+    if (index === 0) return;
+    setImagesList(prev => {
+      const copy = [...prev];
+      const [selected] = copy.splice(index, 1);
+      return [selected, ...copy];
+    });
+    showToast('Updated main cover photo.', 'success');
+  };
 
   // ---  Submit product 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -386,13 +418,50 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
       showToast('Please fill out all product details.', 'error');
       return;
     }
+
     setFormLoading(true);
-    setUploadingImage(true);
 
     try {
-      const uploadedImages = selectedFiles?.length ? await uploadSelectedImages() : [];
-      const defaultImg = uploadedImages[0] || imageUrl || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80';
-      const payload = { name, price, category, size, condition, conditionNote, images: uploadedImages.length ? uploadedImages : [defaultImg], description, isSold, quantity: 1 };
+      let finalImages = [...imagesList];
+
+      // If user selected files in input that haven't been uploaded yet, upload them
+      if (selectedFiles && selectedFiles.length > 0) {
+        const fileArray = Array.from(selectedFiles).filter((f): f is File => f instanceof File);
+        if (fileArray.length > 0) {
+          setUploadingImage(true);
+          const uploadedUrls: string[] = [];
+          for (const file of fileArray) {
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = () => reject(new Error('Could not read image file.'));
+              reader.readAsDataURL(file);
+            });
+            const res = await fetch('/api/products/upload', {
+              method: 'POST',
+              headers: authHeaders(token),
+              body: JSON.stringify({ filename: file.name, contentType: file.type, data: dataUrl }),
+            });
+            if (res.ok) {
+              const json = await res.json();
+              uploadedUrls.push(json.url);
+            }
+          }
+          finalImages = [...finalImages, ...uploadedUrls];
+        }
+      }
+
+
+      if (imageUrl.trim()) {
+        finalImages.push(imageUrl.trim());
+        setImageUrl('');
+      }
+
+      if (finalImages.length === 0) {
+        finalImages = ['https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80'];
+      }
+
+      const payload = { name, price, category, size, condition, conditionNote, images: finalImages, description, isSold, quantity: 1 };
 
       if (editingId) {
         const res = await fetch(`/api/products/${editingId}`, {
@@ -416,6 +485,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
       setUploadingImage(false);
     }
   };
+
 
   // ---  Delete product 
   const handleDelete = async (id: string) => {
@@ -634,10 +704,13 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
                     <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">Category *</label>
                     <select value={category} onChange={e => setCategory(e.target.value as Category)}
                       className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]">
-                      <option value="mens">Men's</option>
-                      <option value="womens">Women's</option>
-                      <option value="kids">Kids</option>
-                      <option value="accessories">Accessories</option>
+                      <option value="mens">Men's Apparel</option>
+                      <option value="womens">Women's Apparel</option>
+                      <option value="kids">Kids' Clothing</option>
+                      <option value="accessories">Accessories & Bags</option>
+                      <option value="jewelry">Jewelry</option>
+                      <option value="perfumes">Perfumes & Colognes</option>
+                      <option value="others">Others & Curios</option>
                     </select>
                   </div>
 
@@ -658,26 +731,99 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
                       placeholder="e.g. Minor fading on left pocket, no tears" />
                   </div>
 
-                  <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">Product Images</label>
-                    <input type="file" accept="image/*" multiple onChange={e => setSelectedFiles(e.target.files)}
-                      className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]" />
-                    <p className="text-xs text-[#6B6B65]">Upload one or more images from your device. You can also paste an image URL below.</p>
-                  </div>
+                  {/* Multi-Image Shots Section */}
+                  <div className="sm:col-span-2 space-y-3 bg-[#F7F6F2] p-4 rounded-xl border border-[#E5E3DE]">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-xs font-bold text-[#1C1C1A] uppercase tracking-wide block">Product Photos / Shots ({imagesList.length})</label>
+                        <p className="text-[11px] text-[#6B6B65]">Upload multiple shots (front, back, label, detail shots). First image will be used as the main cover photo.</p>
+                      </div>
+                      {uploadingImage && (
+                        <span className="flex items-center gap-1.5 text-xs text-[#2D6A4F] font-semibold">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading photo...
+                        </span>
+                      )}
+                    </div>
 
-                  <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">Image URL</label>
-                    <input value={imageUrl} onChange={e => setImageUrl(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
-                      placeholder="https://... (leave blank for placeholder)" />
+                    {/* Attached Shots Gallery */}
+                    {imagesList.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 pt-1">
+                        {imagesList.map((img, idx) => (
+                          <div key={idx} className="relative group bg-white rounded-lg border border-[#E5E3DE] overflow-hidden shadow-xs flex flex-col">
+                            <div className="relative aspect-square w-full bg-[#EBE9E3]">
+                              <img src={img} alt={`Shot ${idx + 1}`} className="w-full h-full object-cover" />
+                              <span className={`absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded ${idx === 0 ? 'bg-[#2D6A4F] text-white' : 'bg-black/60 text-white'}`}>
+                                {idx === 0 ? '★ Cover' : `Shot ${idx + 1}`}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImage(idx)}
+                                title="Remove photo"
+                                className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all cursor-pointer opacity-90 hover:opacity-100 border-none"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                            {idx > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleMakeMainPhoto(idx)}
+                                className="w-full py-1 text-[10px] font-semibold text-[#2D6A4F] hover:bg-[#2D6A4F]/10 border-t border-[#E5E3DE] transition-colors cursor-pointer bg-white"
+                              >
+                                Set as Cover
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Upload File Input */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-[#6B6B65] uppercase">Upload Photos from Device</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={e => {
+                          if (e.target.files?.length) {
+                            setSelectedFiles(e.target.files);
+                            uploadFilesToImagesList(e.target.files);
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-white border border-[#E5E3DE] rounded-lg text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                      />
+                    </div>
+
+                    {/* Image URL Input */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-[#6B6B65] uppercase">Add Photo by Web URL</label>
+                      <div className="flex gap-2">
+                        <input
+                          value={imageUrl}
+                          onChange={e => setImageUrl(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddImageUrl(); } }}
+                          placeholder="https://... (paste image link)"
+                          className="flex-1 px-3 py-2 text-xs bg-white border border-[#E5E3DE] rounded-lg text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F]"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddImageUrl}
+                          className="px-3.5 py-2 text-xs font-semibold bg-[#1C1C1A] hover:bg-[#2D6A4F] text-white rounded-lg transition-colors cursor-pointer border-none shrink-0"
+                        >
+                          Add URL
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="sm:col-span-2 space-y-1">
                     <label className="text-xs font-semibold text-[#1C1C1A] uppercase tracking-wide">Description *</label>
                     <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} required
                       className="w-full px-3 py-2.5 text-sm bg-[#F7F6F2] border border-[#E5E3DE] rounded-xl text-[#1C1C1A] focus:outline-none focus:border-[#2D6A4F] resize-none"
-                      placeholder="Describe the garment in detail..." />
+                      placeholder="Describe the item in detail..." />
                   </div>
+
 
                   {editingId && (
                     <div className="sm:col-span-2 flex items-center gap-2">

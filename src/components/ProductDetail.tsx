@@ -49,7 +49,10 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
   const categoryLabel = product.category === 'mens' ? "Men's"
     : product.category === 'womens' ? "Women's"
     : product.category === 'kids' ? 'Kids'
-    : 'Accessories';
+    : product.category === 'accessories' ? 'Accessories'
+    : product.category === 'jewelry' ? 'Jewelry'
+    : product.category === 'perfumes' ? 'Perfumes & Colognes'
+    : 'Others';
 
   return (
     <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
@@ -90,6 +93,11 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
                 </span>
               </div>
             )}
+            {product.images.length > 1 && (
+              <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-xs text-white text-[10px] font-mono px-2.5 py-1 rounded-full font-semibold">
+                Shot {activeImageIndex + 1} of {product.images.length}
+              </div>
+            )}
           </div>
 
           {/* Thumbnails */}
@@ -101,17 +109,20 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
                   onClick={() => setActiveImageIndex(idx)}
                   className={`relative w-16 h-16 rounded-lg overflow-hidden shrink-0 cursor-pointer transition-all duration-300 ${
                     idx === activeImageIndex
-                      ? 'ring-2 ring-[#2D6A4F] ring-offset-2 opacity-100'
+                      ? 'ring-2 ring-[#2D6A4F] ring-offset-2 opacity-100 scale-105'
                       : 'opacity-60 hover:opacity-100'
                   }`}
                   id={`image-thumb-${idx}`}
                 >
                   <img
                     src={img}
-                    alt={`${product.name} thumbnail ${idx + 1}`}
+                    alt={`${product.name} shot ${idx + 1}`}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
+                  <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[8px] px-1 font-mono font-bold rounded">
+                    #{idx + 1}
+                  </span>
                 </button>
               ))}
             </div>
@@ -119,9 +130,10 @@ export default function ProductDetail({ product, onBack, onAddToCart, isInCart, 
 
           <p className="text-[11px] text-[#6B6B65] flex items-center gap-1.5 mt-1">
             <Info className="w-3.5 h-3.5 text-[#2D6A4F]" />
-            <span>Actual photos of this piece. What you see is what you get.</span>
+            <span>Actual photos of this item ({product.images.length} shot{product.images.length > 1 ? 's' : ''}). What you see is what you get.</span>
           </p>
         </div>
+
 
         {/* Right: Product Details */}
         <div className="lg:col-span-6 flex flex-col gap-5 lg:sticky lg:top-24 h-fit">

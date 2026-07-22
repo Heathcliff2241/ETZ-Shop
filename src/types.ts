@@ -1,4 +1,4 @@
-export type Category = 'mens' | 'womens' | 'kids' | 'accessories';
+export type Category = 'mens' | 'womens' | 'kids' | 'accessories' | 'jewelry' | 'perfumes' | 'others';
 
 export type ConditionGrade = 'Like New' | 'Gently Loved' | 'Well-Loved';
 

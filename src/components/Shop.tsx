@@ -104,15 +104,29 @@ export default function Shop({
                 Curated & Clean Inventory
               </span>
               <h1 className="font-heading text-3xl font-extrabold text-text-primary capitalize tracking-tight">
-                {activeCategoryFilter === 'all' ? 'All Finds' : `${activeCategoryFilter === 'mens' ? "Men's" : activeCategoryFilter === 'womens' ? "Women's" : activeCategoryFilter.charAt(0).toUpperCase() + activeCategoryFilter.slice(1)}'s Collection`}
+                {activeCategoryFilter === 'all'
+                  ? 'All Finds'
+                  : activeCategoryFilter === 'mens'
+                  ? "Men's Apparel"
+                  : activeCategoryFilter === 'womens'
+                  ? "Women's Collection"
+                  : activeCategoryFilter === 'kids'
+                  ? "Kids' Clothing"
+                  : activeCategoryFilter === 'accessories'
+                  ? 'Accessories & Bags'
+                  : activeCategoryFilter === 'jewelry'
+                  ? 'Jewelry & Ornaments'
+                  : activeCategoryFilter === 'perfumes'
+                  ? 'Perfumes & Colognes'
+                  : 'Others & Curios'}
               </h1>
               <p className="text-xs text-text-secondary max-w-xl">
-                Every single garment is hand-checked, washed, and measured. Only one of each available.
+                Every single item is hand-checked, sanitized, and measured. Only one of each available.
               </p>
             </div>
             
             <div className="text-xs font-mono text-text-secondary">
-              Showing <span className="font-semibold text-text-primary font-sans">{filteredProducts.length}</span> of {products.length} garments
+              Showing <span className="font-semibold text-text-primary font-sans">{filteredProducts.length}</span> of {products.length} items
             </div>
           </div>
 
@@ -122,13 +136,13 @@ export default function Shop({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
               
               {/* Search Field (Left / Full Width on Mobile) */}
-              <div className="lg:col-span-5 relative">
+              <div className="lg:col-span-4 relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-secondary/50">
                   <Search className="w-4 h-4" />
                 </span>
                 <input
                   type="text"
-                  placeholder="Search garments by name..."
+                  placeholder="Search items by name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-[#FAF9F5] hover:bg-[#F2EFF6] border border-border/80 rounded-xl pl-10 pr-10 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:ring-1 focus:ring-[#2D6A4F] focus:border-[#2D6A4F] transition-all"
@@ -146,24 +160,31 @@ export default function Shop({
               </div>
 
               {/* Categories Navigation (Center/Right) */}
-              <div className="lg:col-span-7 flex flex-wrap gap-1.5 items-center justify-start lg:justify-end">
-                {(['all', 'mens', 'womens', 'kids', 'accessories'] as const).map((cat, idx) => (
+              <div className="lg:col-span-8 flex flex-wrap gap-1.5 items-center justify-start lg:justify-end">
+                {(['all', 'mens', 'womens', 'kids', 'accessories', 'jewelry', 'perfumes', 'others'] as const).map((cat, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveCategoryFilter(cat)}
-                    className={`text-xs px-3.5 py-2 font-semibold rounded-lg transition-all cursor-pointer border ${
+                    className={`text-xs px-3 py-1.5 sm:px-3.5 sm:py-2 font-semibold rounded-lg transition-all cursor-pointer border ${
                       activeCategoryFilter === cat
                         ? 'bg-[#1C1C1A] border-[#1C1C1A] text-white'
                         : 'bg-white border-border hover:bg-[#FAF9F5] text-text-primary'
                     }`}
                     id={`filter-tab-${cat}`}
                   >
-                    {cat === 'all' ? 'All Finds' : cat === 'mens' ? "Men's" : cat === 'womens' ? "Women's" : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    {cat === 'all' ? 'All Finds'
+                      : cat === 'mens' ? "Men's"
+                      : cat === 'womens' ? "Women's"
+                      : cat === 'kids' ? 'Kids'
+                      : cat === 'accessories' ? 'Accessories'
+                      : cat === 'jewelry' ? 'Jewelry'
+                      : cat === 'perfumes' ? 'Perfumes'
+                      : 'Others'}
                   </button>
                 ))}
               </div>
-
             </div>
+
 
             {/* Dropdown Filters Toolbar: Size & Condition */}
             <div className="bg-white border border-border p-3 rounded-xl flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between shadow-[0_1px_2px_rgba(0,0,0,0.01)]">

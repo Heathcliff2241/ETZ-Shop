@@ -255,7 +255,7 @@ export default function Home({
             {/* Accessories */}
             <div
               onClick={() => onNavigate('shop', 'accessories')}
-              className="md:col-span-2 group cursor-pointer bg-white border border-border/60 rounded-xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-500 relative aspect-[16/9] md:aspect-[21/9]"
+              className="group cursor-pointer bg-white border border-border/60 rounded-xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-500 relative min-h-[280px] md:min-h-0 md:h-full"
             >
               <div className="absolute inset-0 w-full h-full overflow-hidden">
                 <img
@@ -270,6 +270,56 @@ export default function Home({
                   <span className="text-[9px] font-mono tracking-[0.25em] uppercase text-accent-warm font-bold">04 // FINE DETAILS</span>
                   <h4 className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-white leading-none">Accessories</h4>
                   <p className="text-xs text-white/70 font-light mt-1">Genuine leather messengers, woven bags & handcrafted details.</p>
+                </div>
+                <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center bg-white/5 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-2 transition-all duration-300">
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Jewelry */}
+            <div
+              onClick={() => onNavigate('shop', 'jewelry')}
+              className="group cursor-pointer bg-white border border-border/60 rounded-xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-500 relative min-h-[280px] md:min-h-0 md:h-full"
+            >
+              <div className="absolute inset-0 w-full h-full overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=600&q=80"
+                  alt="Jewelry"
+                  className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10 transition-opacity duration-300 group-hover:opacity-90" />
+              </div>
+              <div className="absolute bottom-6 left-6 right-6 text-white flex justify-between items-end">
+                <div className="space-y-1">
+                  <span className="text-[9px] font-mono tracking-[0.25em] uppercase text-accent-warm font-bold">05 // GEMSTONES & METALS</span>
+                  <h4 className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-white leading-none">Jewelry</h4>
+                  <p className="text-xs text-white/70 font-light mt-1">Vintage rings, brass pendants & artisan accessories.</p>
+                </div>
+                <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center bg-white/5 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-2 transition-all duration-300">
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Perfumes & Colognes */}
+            <div
+              onClick={() => onNavigate('shop', 'perfumes')}
+              className="group cursor-pointer bg-white border border-border/60 rounded-xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-500 relative min-h-[280px] md:min-h-0 md:h-full"
+            >
+              <div className="absolute inset-0 w-full h-full overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=600&q=80"
+                  alt="Perfumes"
+                  className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10 transition-opacity duration-300 group-hover:opacity-90" />
+              </div>
+              <div className="absolute bottom-6 left-6 right-6 text-white flex justify-between items-end">
+                <div className="space-y-1">
+                  <span className="text-[9px] font-mono tracking-[0.25em] uppercase text-accent-warm font-bold">06 // FRAGRANCE</span>
+                  <h4 className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-white leading-none">Perfumes</h4>
+                  <p className="text-xs text-white/70 font-light mt-1">Botanical colognes, sandalwood oils & luxury scents.</p>
                 </div>
                 <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center bg-white/5 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-2 transition-all duration-300">
                   <ArrowRight className="w-4 h-4 text-white" />
