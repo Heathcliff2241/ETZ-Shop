@@ -173,13 +173,13 @@ export default function Footer({
           </div>
           <div className="flex items-center gap-6">
             <button
-              onClick={() => onNavigate('privacy')}
+              onClick={() => handleNav('privacy-policy')}
               className="hover:text-white/70 transition-colors cursor-pointer"
             >
               Privacy
             </button>
             <button
-              onClick={() => onNavigate('terms')}
+              onClick={() => handleNav('terms')}
               className="hover:text-white/70 transition-colors cursor-pointer"
             >
               Terms

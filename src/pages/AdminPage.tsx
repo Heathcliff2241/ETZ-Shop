@@ -258,19 +258,7 @@ export default function AdminPage() {
           </AnimatePresence>
 
           {/* CTA Button */}
-          {authState !== 'awaiting_code' ? (
-            <button
-              onClick={handleRequestOtp}
-              disabled={!email || isLoading}
-              className="w-full bg-[#1C1C1A] hover:bg-[#2D6A4F] text-white font-semibold text-sm py-3 rounded-xl transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer border-none"
-            >
-              {authState === 'sending' ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
-              ) : (
-                'Send OTP Code'
-              )}
-            </button>
-          ) : (
+          {authState === 'awaiting_code' || authState === 'verifying' ? (
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleVerifyOtp}
@@ -290,6 +278,18 @@ export default function AdminPage() {
                 ← Use a different email
               </button>
             </div>
+          ) : (
+            <button
+              onClick={handleRequestOtp}
+              disabled={!email || isLoading}
+              className="w-full bg-[#1C1C1A] hover:bg-[#2D6A4F] text-white font-semibold text-sm py-3 rounded-xl transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer border-none"
+            >
+              {authState === 'sending' ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+              ) : (
+                'Send OTP Code'
+              )}
+            </button>
           )}
         </div>
 
