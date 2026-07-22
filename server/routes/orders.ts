@@ -3,6 +3,7 @@ import { sql } from '../db.js';
 import { requireAdmin } from './admin.js';
 import { assertRequiredFields, asyncHandler, validateEmail } from '../utils/validation.js';
 import { sendOrderNotification } from '../mailer.js';
+import { broadcast } from '../events.js';
 
 export const ordersRouter = Router();
 
@@ -77,12 +78,6 @@ ordersRouter.post('/', asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  // Ensure columns exist (idempotent — will no-op if already present)
-  try {
-    await sql`ALTER TABLE etz_orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash'`;
-    await sql`ALTER TABLE etz_orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(30) DEFAULT 'unpaid'`;
-  } catch { /* ignore if not supported */ }
-
   await sql`
     INSERT INTO etz_orders
       (id, customer_name, customer_phone, customer_email, delivery_method,
@@ -96,10 +91,8 @@ ordersRouter.post('/', asyncHandler(async (req: Request, res: Response) => {
   `;
 
   const now = new Date().toISOString();
-  for (const item of items as Array<{ productId?: string }> ) {
-    if (item.productId) {
-      await sql`UPDATE etz_products SET is_sold = true, sold_at = ${now} WHERE id = ${item.productId}`;
-    }
+  if (requestedProductIds.length > 0) {
+    await sql`UPDATE etz_products SET is_sold = true, sold_at = ${now} WHERE id = ANY(${requestedProductIds})`;
   }
 
   const rows = await sql`SELECT * FROM etz_orders WHERE id = ${id}`;
@@ -119,7 +112,17 @@ ordersRouter.post('/', asyncHandler(async (req: Request, res: Response) => {
     console.warn('[orders] Failed to send order notification.', error);
   }
 
-  return res.status(201).json(toOrder(order));
+  const createdOrder = toOrder(order);
+  try {
+    broadcast('order:created', createdOrder);
+    if (requestedProductIds.length > 0) {
+      broadcast('product:updated', { soldProductIds: requestedProductIds });
+    }
+  } catch (err) {
+    console.warn('[orders] Failed to broadcast order event:', err);
+  }
+
+  return res.status(201).json(createdOrder);
 }));
 
 // ── GET /api/orders  (admin only) ────────────────────────────────────────────
@@ -169,7 +172,9 @@ ordersRouter.put('/:id/status', requireAdmin, asyncHandler(async (req: Request, 
     console.warn('[orders] Failed to send order status notification.', error);
   }
 
-  return res.json(toOrder(rows2[0]));
+  const updatedOrder = toOrder(rows2[0]);
+  try { broadcast('order:updated', updatedOrder); } catch {}
+  return res.json(updatedOrder);
 }));
 
 // ── PUT /api/orders/:id/payment-status  (admin only) ─────────────────────────
@@ -186,5 +191,7 @@ ordersRouter.put('/:id/payment-status', requireAdmin, asyncHandler(async (req: R
   const rows = await sql`SELECT * FROM etz_orders WHERE id = ${req.params.id}` as Array<Record<string, unknown>>;
   if (rows.length === 0) return res.status(404).json({ error: 'Not found.' });
 
-  return res.json(toOrder(rows[0]));
+  const updatedOrder = toOrder(rows[0]);
+  try { broadcast('order:updated', updatedOrder); } catch {}
+  return res.json(updatedOrder);
 }));

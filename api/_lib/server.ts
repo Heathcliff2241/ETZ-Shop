@@ -9,6 +9,7 @@ import { usersRouter } from '../../server/routes/users.js';
 import { cartRouter } from '../../server/routes/cart.js';
 import { wishlistRouter } from '../../server/routes/wishlist.js';
 import { contactRouter } from '../../server/routes/contact.js';
+import { eventsRouter } from '../../server/events.js';
 import { notFoundHandler, errorHandler } from '../../server/middleware/errorHandler.js';
 
 dotenv.config();
@@ -43,6 +44,8 @@ app.use('/api/wishlist', wishlistRouter);
 app.use('/wishlist', wishlistRouter);
 app.use('/api/contact', contactRouter);
 app.use('/contact', contactRouter);
+app.use('/api/events', eventsRouter);
+app.use('/events', eventsRouter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.get('/health', (_req, res) => res.json({ ok: true }));

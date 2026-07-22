@@ -5,6 +5,7 @@ import { put } from '@vercel/blob';
 import { sql, isDbAvailable } from '../db.js';
 import { requireAdmin } from './admin.js';
 import { assertRequiredFields, asyncHandler, parsePositiveNumber } from '../utils/validation.js';
+import { broadcast } from '../events.js';
 
 export const productsRouter = Router();
 
@@ -275,7 +276,9 @@ productsRouter.post('/', requireAdmin, asyncHandler(async (req: Request, res: Re
         now
       ]
     ) as Array<Record<string, unknown>>;
-    return res.status(201).json(toProduct(rows[0]));
+    const createdProduct = toProduct(rows[0]);
+    try { broadcast('product:updated', createdProduct); } catch {}
+    return res.status(201).json(createdProduct);
   } catch (error) {
     console.warn('[products] Failed to insert product.', error);
     return res.status(503).json({ error: 'Product storage is currently unavailable.' });
@@ -334,7 +337,9 @@ productsRouter.put('/:id', requireAdmin, asyncHandler(async (req: Request, res: 
       ]
     ) as Array<Record<string, unknown>>;
     if (rows.length === 0) return res.status(404).json({ error: 'Not found.' });
-    return res.json(toProduct(rows[0]));
+    const updatedProduct = toProduct(rows[0]);
+    try { broadcast('product:updated', updatedProduct); } catch {}
+    return res.json(updatedProduct);
   } catch (error) {
     console.warn('[products] Failed to update product.', error);
     return res.status(503).json({ error: 'Product storage is currently unavailable.' });
@@ -353,6 +358,7 @@ productsRouter.delete('/:id', requireAdmin, asyncHandler(async (req: Request, re
     await sql.query('DELETE FROM etz_carts WHERE product_id = $1', [id]);
     await sql.query('DELETE FROM etz_wishlists WHERE product_id = $1', [id]);
     await sql.query('DELETE FROM etz_products WHERE id = $1', [id]);
+    try { broadcast('product:updated', { deletedId: id }); } catch {}
     return res.json({ ok: true });
   } catch (error) {
     console.warn('[products] Failed to delete product.', error);

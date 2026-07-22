@@ -7,21 +7,21 @@ import { DEFAULT_PRODUCTS } from './data';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProductCard from './components/ProductCard';
-import AdminPanel from './components/AdminPanel';
-
-// Modular Page Imports
-import Home from './components/Home';
-import Shop from './components/Shop';
-import Wishlist from './components/Wishlist';
-import HowItWorks from './components/HowItWorks';
-import About from './components/About';
-import FAQ from './components/FAQ';
-import Contact from './components/Contact';
-import Cart from './components/Cart';
-import Checkout from './components/Checkout';
-import OrderConfirmation from './components/OrderConfirmation';
-import MyOrders from './components/MyOrders';
 import { PrivacyPolicy, TermsOfService } from './components/LegalPages';
+
+// Lazy-loaded Modular Page Components
+const Home = React.lazy(() => import('./components/Home'));
+const Shop = React.lazy(() => import('./components/Shop'));
+const Wishlist = React.lazy(() => import('./components/Wishlist'));
+const HowItWorks = React.lazy(() => import('./components/HowItWorks'));
+const About = React.lazy(() => import('./components/About'));
+const FAQ = React.lazy(() => import('./components/FAQ'));
+const Contact = React.lazy(() => import('./components/Contact'));
+const Cart = React.lazy(() => import('./components/Cart'));
+const Checkout = React.lazy(() => import('./components/Checkout'));
+const OrderConfirmation = React.lazy(() => import('./components/OrderConfirmation'));
+const MyOrders = React.lazy(() => import('./components/MyOrders'));
+const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
 
 const cleanForStorage = <T,>(obj: T): T => {
   try {
@@ -90,7 +90,7 @@ export default function App() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
-  const publicProducts = cleanupExpiredProducts(products);
+  const publicProducts = React.useMemo(() => cleanupExpiredProducts(products), [products]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
@@ -188,6 +188,28 @@ export default function App() {
       }
     };
     fetchFreshProducts();
+
+    // Subscribe to SSE stream for live real-time product updates
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/events');
+      eventSource.addEventListener('product:updated', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload && Array.isArray(payload.soldProductIds)) {
+            setProducts((prev) =>
+              prev.map((p) => (payload.soldProductIds.includes(p.id) ? { ...p, isSold: true } : p))
+            );
+          } else {
+            fetchFreshProducts();
+          }
+        } catch {
+          fetchFreshProducts();
+        }
+      });
+    } catch (sseErr) {
+      console.warn('[app] Real-time SSE connection failed:', sseErr);
+    }
 
     // Fetch public shop settings from server backend
     const fetchShopSettings = async () => {
@@ -298,6 +320,7 @@ export default function App() {
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
+      eventSource?.close();
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
@@ -305,7 +328,7 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setAppLoading(false);
-    }, 1800);
+    }, 200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -606,30 +629,32 @@ export default function App() {
   const activeProduct = products.find(p => p.id === selectedProductId);
 
   // --- FILTERING LOGIC ---
-  const filteredProducts = products.filter(p => {
-    const matchesCategory = activeCategoryFilter === 'all' || p.category === activeCategoryFilter;
-    const matchesCondition = activeConditionFilter === 'all' || p.condition === activeConditionFilter;
+  const filteredProducts = React.useMemo(() => {
+    return products.filter(p => {
+      const matchesCategory = activeCategoryFilter === 'all' || p.category === activeCategoryFilter;
+      const matchesCondition = activeConditionFilter === 'all' || p.condition === activeConditionFilter;
 
-    // Size parsing (rough filter)
-    let matchesSize = true;
-    if (activeSizeFilter !== 'all') {
-      const sizeLower = p.size.toLowerCase().trim();
-      const filterLower = activeSizeFilter.toLowerCase();
-      if (filterLower === 's') {
-        matchesSize = sizeLower === 's' || sizeLower.startsWith('s ') || sizeLower.startsWith('s(') || sizeLower.includes('(s') || sizeLower.includes('s-');
-      } else if (filterLower === 'm') {
-        matchesSize = sizeLower === 'm' || sizeLower.startsWith('m ') || sizeLower.startsWith('m(') || sizeLower.includes('(m') || sizeLower.includes('m-');
-      } else if (filterLower === 'l') {
-        matchesSize = sizeLower === 'l' || sizeLower.startsWith('l ') || sizeLower.startsWith('l(') || sizeLower.includes('(l') || sizeLower.includes('l-');
-      } else if (filterLower === 'xl') {
-        matchesSize = sizeLower.includes('xl');
-      } else if (filterLower === 'kids') {
-        matchesSize = p.category === 'kids' || sizeLower.includes('y') || sizeLower.includes('years') || sizeLower.includes('t');
+      // Size parsing (rough filter)
+      let matchesSize = true;
+      if (activeSizeFilter !== 'all') {
+        const sizeLower = p.size.toLowerCase().trim();
+        const filterLower = activeSizeFilter.toLowerCase();
+        if (filterLower === 's') {
+          matchesSize = sizeLower === 's' || sizeLower.startsWith('s ') || sizeLower.startsWith('s(') || sizeLower.includes('(s') || sizeLower.includes('s-');
+        } else if (filterLower === 'm') {
+          matchesSize = sizeLower === 'm' || sizeLower.startsWith('m ') || sizeLower.startsWith('m(') || sizeLower.includes('(m') || sizeLower.includes('m-');
+        } else if (filterLower === 'l') {
+          matchesSize = sizeLower === 'l' || sizeLower.startsWith('l ') || sizeLower.startsWith('l(') || sizeLower.includes('(l') || sizeLower.includes('l-');
+        } else if (filterLower === 'xl') {
+          matchesSize = sizeLower.includes('xl');
+        } else if (filterLower === 'kids') {
+          matchesSize = p.category === 'kids' || sizeLower.includes('y') || sizeLower.includes('years') || sizeLower.includes('t');
+        }
       }
-    }
 
-    return matchesCategory && matchesCondition && matchesSize;
-  });
+      return matchesCategory && matchesCondition && matchesSize;
+    });
+  }, [products, activeCategoryFilter, activeConditionFilter, activeSizeFilter]);
 
   // Unique sizes & conditions for dropdown listing dynamically
   const uniqueSizes = ['all', 'S', 'M', 'L', 'XL', 'kids'];
@@ -724,7 +749,12 @@ export default function App() {
 
       {/* MAIN CONTENT PORT PORTION WITH TRANSITIONS */}
       <main className={`flex-grow w-full ${currentPage !== 'home' ? 'pt-20 sm:pt-24' : ''}`}>
-        <AnimatePresence mode="wait">
+        <React.Suspense fallback={
+          <div className="min-h-[50vh] flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-[#2D6A4F] border-t-transparent rounded-full animate-spin" />
+          </div>
+        }>
+          <AnimatePresence mode="wait">
           {/* A. HOMEPAGE */}
           {currentPage === 'home' && (
             <motion.div
@@ -1006,6 +1036,7 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        </React.Suspense>
       </main>
 
       {/* FOOTER COMPONENT */}

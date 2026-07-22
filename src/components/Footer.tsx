@@ -1,12 +1,16 @@
+'use client';
+
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Mail, Phone, MapPin, Heart } from 'lucide-react';
 import { Category } from '../types';
+import { useApp } from '../providers/AppProvider';
 
 interface FooterProps {
-  onNavigate: (page: string, category?: Category | 'all') => void;
-  shopEmail: string;
-  shopPhone: string;
-  shopFacebook: string;
+  onNavigate?: (page: string, category?: Category | 'all') => void;
+  shopEmail?: string;
+  shopPhone?: string;
+  shopFacebook?: string;
   shopName?: string;
   shopAddress?: string;
   shopTagline?: string;
@@ -15,14 +19,34 @@ interface FooterProps {
 
 export default function Footer({
   onNavigate,
-  shopEmail,
-  shopPhone,
-  shopFacebook,
-  shopName = 'ETZ',
-  shopAddress = 'Tagbilaran City, Bohol, Philippines',
-  shopTagline = 'Curated secondhand clothing & thrift items.',
-  shopInstagram,
+  shopEmail: propEmail,
+  shopPhone: propPhone,
+  shopFacebook: propFB,
+  shopName: propName,
+  shopAddress: propAddress,
+  shopTagline: propTagline,
+  shopInstagram: propIG,
 }: FooterProps) {
+  const router = useRouter();
+  const appContext = useApp();
+
+  const shopEmail = propEmail ?? appContext.settings.shopEmail;
+  const shopPhone = propPhone ?? appContext.settings.shopPhone;
+  const shopFacebook = propFB ?? appContext.settings.shopFacebook;
+  const shopName = propName ?? appContext.settings.shopName;
+  const shopAddress = propAddress ?? appContext.settings.shopAddress;
+  const shopTagline = propTagline ?? appContext.settings.shopTagline;
+  const shopInstagram = propIG ?? appContext.settings.shopInstagram;
+
+  const handleNav = (page: string, category?: Category | 'all') => {
+    if (onNavigate) {
+      onNavigate(page, category);
+    } else {
+      if (page === 'home') router.push('/');
+      else if (page === 'shop') router.push(category && category !== 'all' ? `/shop?category=${category}` : '/shop');
+      else router.push(`/${page}`);
+    }
+  };
   const currentYear = new Date().getFullYear();
 
   return (
@@ -33,7 +57,7 @@ export default function Footer({
           {/* Brand Column */}
           <div className="md:col-span-5 space-y-5">
             <button
-              onClick={() => onNavigate('home')}
+              onClick={() => handleNav('home')}
               className="font-heading text-2xl tracking-tight text-white block cursor-pointer hover:text-[#D4A853] transition-colors duration-300"
             >
               {shopName}
@@ -55,7 +79,7 @@ export default function Footer({
             <ul className="space-y-2.5 text-[14px]">
               <li>
                 <button
-                  onClick={() => onNavigate('shop', 'all')}
+                  onClick={() => handleNav('shop', 'all')}
                   className="text-white/70 hover:text-white transition-colors cursor-pointer text-left"
                 >
                   Shop catalog
@@ -63,7 +87,7 @@ export default function Footer({
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('my-orders')}
+                  onClick={() => handleNav('my-orders')}
                   className="text-white/70 hover:text-white transition-colors cursor-pointer text-left"
                 >
                   Track my orders
@@ -71,7 +95,7 @@ export default function Footer({
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('how-it-works')}
+                  onClick={() => handleNav('how-it-works')}
                   className="text-white/70 hover:text-white transition-colors cursor-pointer text-left"
                 >
                   How it works
@@ -79,7 +103,7 @@ export default function Footer({
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('about')}
+                  onClick={() => handleNav('about')}
                   className="text-white/70 hover:text-white transition-colors cursor-pointer text-left"
                 >
                   Our story
@@ -87,7 +111,7 @@ export default function Footer({
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('faq')}
+                  onClick={() => handleNav('faq')}
                   className="text-white/70 hover:text-white transition-colors cursor-pointer text-left"
                 >
                   Common questions
@@ -95,7 +119,7 @@ export default function Footer({
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('contact')}
+                  onClick={() => handleNav('contact')}
                   className="text-white/70 hover:text-white transition-colors cursor-pointer text-left"
                 >
                   Contact us

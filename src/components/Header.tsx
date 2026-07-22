@@ -1,21 +1,34 @@
+'use client';
+
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'motion/react';
 import { ShoppingBag, Menu, X, Lock, Heart, Package } from 'lucide-react';
 import { Category } from '../types';
+import { useApp } from '../providers/AppProvider';
 
 interface HeaderProps {
-  currentPage: string;
-  cartCount: number;
-  wishlistCount: number;
-  onNavigate: (page: string, category?: Category | 'all') => void;
+  currentPage?: string;
+  cartCount?: number;
+  wishlistCount?: number;
+  onNavigate?: (page: string, category?: Category | 'all') => void;
 }
 
-export default function Header({ currentPage, cartCount, wishlistCount, onNavigate }: HeaderProps) {
+export default function Header({
+  currentPage = 'home',
+  cartCount: propCartCount,
+  wishlistCount: propWishlistCount,
+  onNavigate,
+}: HeaderProps) {
+  const router = useRouter();
+  const appContext = useApp();
+
+  const cartCount = propCartCount ?? appContext.cart.length;
+  const wishlistCount = propWishlistCount ?? appContext.wishlist.length;
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Only home page has a full-bleed dark hero behind the header at top —
-  // everywhere else the header should start "solid" since content sits light/white immediately below it.
   const hasTransparentHero = currentPage === 'home';
 
   const { scrollY } = useScroll();
@@ -33,7 +46,13 @@ export default function Header({ currentPage, cartCount, wishlistCount, onNaviga
   ];
 
   const handleNavClick = (page: string, category?: Category | 'all') => {
-    onNavigate(page, category);
+    if (onNavigate) {
+      onNavigate(page, category);
+    } else {
+      if (page === 'home') router.push('/');
+      else if (page === 'shop') router.push(category && category !== 'all' ? `/shop?category=${category}` : '/shop');
+      else router.push(`/${page}`);
+    }
     setIsMobileMenuOpen(false);
   };
 

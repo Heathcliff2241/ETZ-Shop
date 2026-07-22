@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Edit2, Trash2, CheckCircle, XCircle, Package,
@@ -326,14 +328,66 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     fetchOrders();
   }, [fetchProducts, fetchOrders]);
 
-  // Polling for real-time order & product sync
+  // Real-Time SSE Stream + Intelligent Polling fallback
   useEffect(() => {
-    const timer = setInterval(() => {
-      fetchProducts(true);
-      fetchOrders(true);
-    }, 6000); // Poll every 6 seconds for super-responsive updates
+    let eventSource: EventSource | null = null;
 
-    return () => clearInterval(timer);
+    const connectSSE = () => {
+      try {
+        eventSource = new EventSource('/api/events');
+
+        eventSource.addEventListener('order:created', (e: MessageEvent) => {
+          try {
+            const newOrder = JSON.parse(e.data);
+            playNotificationSound();
+            showToast(`🚨 New Order #${String(newOrder.id).slice(-6).toUpperCase()} received from ${newOrder.customerName}! (₱${Number(newOrder.subtotal).toLocaleString()})`, 'success');
+            fetchOrders(true);
+            fetchProducts(true);
+          } catch {}
+        });
+
+        eventSource.addEventListener('order:updated', () => {
+          fetchOrders(true);
+        });
+
+        eventSource.addEventListener('product:updated', () => {
+          fetchProducts(true);
+        });
+
+        eventSource.onerror = () => {
+          // Reconnect automatically if stream closes
+          eventSource?.close();
+        };
+      } catch (err) {
+        console.warn('[sse] Could not connect to real-time events stream:', err);
+      }
+    };
+
+    connectSSE();
+
+    // Fallback periodic sync every 45s when tab is active
+    const syncData = () => {
+      if (document.visibilityState === 'visible') {
+        fetchProducts(true);
+        fetchOrders(true);
+      }
+    };
+
+    const timer = setInterval(syncData, 45000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      eventSource?.close();
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchProducts, fetchOrders]);
 
   // ---  Form reset 

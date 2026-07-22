@@ -9,7 +9,7 @@ let dbError: Error | null = null;
 try {
   if (process.env.DATABASE_URL) {
     const client = postgres(process.env.DATABASE_URL, {
-      max: 1,           // critical for serverless — avoid connection pool exhaustion
+      max: 3,           // increased to 3 for serverless to handle concurrent requests smoothly
       ssl: 'require',
       idle_timeout: 20,
       connect_timeout: 10,
@@ -455,6 +455,11 @@ export async function initDb() {
         date_created TEXT
       )
     `;
+
+    try {
+      await sqlInstance`ALTER TABLE etz_orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash'`;
+      await sqlInstance`ALTER TABLE etz_orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(30) DEFAULT 'unpaid'`;
+    } catch {}
 
     await sqlInstance`
       CREATE TABLE IF NOT EXISTS etz_otp_sessions (
