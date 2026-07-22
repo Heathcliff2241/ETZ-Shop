@@ -7,7 +7,7 @@ import AdminPanel from '../components/AdminPanel';
 
 type AuthState = 'idle' | 'sending' | 'awaiting_code' | 'verifying' | 'authenticated';
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'cesaresmero2@gmail.com';
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'cesaresmero2@gmail.com';
 
 function maskEmail(value: string) {
   if (!value) return '';
